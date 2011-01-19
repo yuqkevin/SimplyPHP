@@ -36,6 +36,7 @@ class App extends Core
 	{
 		if (!$name) $name = 'db';
 		$dbdriver = ucfirst(strtolower($dsn['dbdriver']));
+		if (!file_exists(CORE_DIR.'/db/'.strtolower($dbdriver).'.class.php')) return null;
 		if (!isset($this->$name)||!is_object($this->$name)) {
 			$this->$name = new $dbdriver($dsn);
 		}
