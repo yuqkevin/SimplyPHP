@@ -2,6 +2,9 @@
 /** My first application module  **/
 class Myapp extends App
 {
+    protected $mytables = array(
+        'user'  => array('name'=>'app_user','pkey'=>'user_id', 'schema'=>null),
+    );
 	function initial()
 	{
 		$this->db = $this->load_db($this->conf['dsn']['default']);
