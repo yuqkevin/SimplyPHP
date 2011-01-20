@@ -11,6 +11,8 @@ SimplyPHP 框架开发指南
          + 应用类名/视图名.tpl.php
          + 视图名.inc.php
        + controller 控制器目录
+       + conf   应用配置文件目录
+         + database.php
    
 2. URL映射
    . URL格式	http://domain.com/path1/path2/...?query_string

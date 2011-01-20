@@ -11,6 +11,9 @@ SimplyPHP
          + appname/methodname.tpl.php
          + methodname.tpl.php
        + controller
+       + conf   application configure folder
+         + database.php
+
    
 2. URL Parse
    . URL Format	http://domain.com/path1/path2/...?query_string
