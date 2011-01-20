@@ -97,7 +97,7 @@ class App extends Core
         }
         return $opt;
     }
-
+	// external phpmailer package is required under model folder
     function sendmail($from, $to, $subject, $content, $param=array())
     {
 		$default = array(
