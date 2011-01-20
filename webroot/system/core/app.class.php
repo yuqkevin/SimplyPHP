@@ -28,7 +28,7 @@ class App extends Core
 		$handler = "$base_dir/$class/$method.inc.php";
 		if (!file_exists($handler)) $handler = "$base_dir/$method.inc.php";
 		if (file_exists($handler)) include($handler);
-		if (method_exists($this, $method)) call_user_func($this, $method);
+		if (method_exists($this, $method)) call_user_func(array($this, $method), $STACK);
         $content = $this->load_view($this->stream['view'], $this->stream['data']);
         if ($content) $this->output($content, $this->stream['format']);
 	}
