@@ -20,15 +20,15 @@ class App extends Core
 		$this->initial();
 	}
 	function initial(){}	// reserved for customization
-	function handler($method, $STACK)
+	function handler($method, $_sp_STACK)
 	{
-		$this->stream = array('view'=>$method,'data'=>null,'format'=>'html');
+		$this->stream = array('view'=>$method,'data'=>null,'format'=>'html','param'=>$_sp_STACK);
 		$base_dir = APP_DIR."/model/handler";
 		$class = strtolower(get_class($this));
 		$handler = "$base_dir/$class/$method.inc.php";
 		if (!file_exists($handler)) $handler = "$base_dir/$method.inc.php";
 		if (file_exists($handler)) include($handler);
-		if (method_exists($this, $method)) call_user_func(array($this, $method), $STACK);
+		if (method_exists($this, $method)) call_user_func(array($this, $method), $this->stream['param']);
         $content = $this->load_view($this->stream['view'], $this->stream['data']);
         if ($content) $this->output($content, $this->stream['format']);
 	}

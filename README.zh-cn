@@ -1,27 +1,34 @@
-Simply PHP 框架开发指南
+SimplyPHP 框架开发指南
 1. MVC结构
    . 框架目录
      + core 框架核心模块
      + app 应用模块
-       + model 业务处理模块目录
-       + views 视图目录
+       + model 业务处理模块目录 应用类名.class.php
+         + handler 函数（方法）文件目录	
+           + 应用类名/函数名.inc.php
+           + 函数名.inc.php
+       + views 视图目录	(函数名被用作缺省视图名)
+         + 应用类名/视图名.tpl.php
+         + 视图名.inc.php
        + controller 控制器目录
    
 2. URL映射
    . URL格式	http://domain.com/path1/path2/...?query_string
    . 缺省映射(由mapping函数实现，该函数及变量this->map可在应用控制器中重新定制。)
-     . domain	=> 应用类名(如Lotto)
-     . path1	=> 方法（处理器）
-     . path2..	=> 参数堆栈($STACK)
+     . domain	=> 应用类(如Lotto)
+     . path1	=> 函数（方法）
+     . path2..	=> 参数堆栈
    . 视图
-     . 缺省 views/应用类名/方法名.tpl.php
+     . 缺省 views/应用类名/函数名.tpl.php
      . 共享 views/方法名.tpl.php
-     . 定制 方法名可在处理器里定制($this->stream['view'])
+     . 定制 视图可在函数中重定位($this->stream['view'])
    . 输出
      . 数据绑定：视图名称,应用数据,输出格式(html,ajax,...);
-     . 应用模块：$this->stream = array('view'=>视图名称,'data'=>应用数据,'format'=>输出格式);
+     . 应用模块：$this->stream = array('view'=>视图名称,'data'=>应用数据,'format'=>输出格式,'param'=>参数堆栈);
 
-3. 保留字
-   . _ENTRY  URL转换
-I. 例子
+I. 保留字
+   . 基本约定	凡带_sp_字头的名字为SimplyPHP保留字，如$_sp_STACK,...
+   . _ENTRY URL转换
+
+II. 例子
 
