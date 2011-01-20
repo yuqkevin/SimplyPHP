@@ -19,8 +19,8 @@ abstract class Dao
     abstract function fetchByRow($hd, $mod=null);
     abstract function updateDB($query);
     abstract function insertDB($query);
-    abstract protected function connect($dsn);
-	abstract protected function _err($msg);
+    abstract protected function connect($dsn=null);
+	abstract protected function _err($msg=null);
 	public function __construct($dsn)
 	{
 		$this->dsn = $dsn;
