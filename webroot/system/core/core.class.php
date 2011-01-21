@@ -110,6 +110,7 @@ Class Core
             return true;
         }
         if (!isset($val)) return @$_SESSION[$name];
+		if (!$val) return unset($_SESSION[$name]);
         return $_SESSION[$name] = $val;
     }
     function logging($info, $log_file=null)
