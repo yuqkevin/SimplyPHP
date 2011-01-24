@@ -19,7 +19,7 @@ Class AppController extends Controller
 {
 	function initial()
 	{
-		$this->map = array('model'=>'App','method'=>'index','param'=>null);
+		$this->map = array('model'=>'welcome','method'=>'index','param'=>null);
         if ($this->request('act')=='logout') $this->app->logout();
 	}
 }

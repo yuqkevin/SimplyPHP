@@ -28,7 +28,7 @@ Class Controller extends Core
 	function __construct($conf=null)
 	{
 		$this->conf = $conf;
-		$this->initial();
+		parent::__construct();
 	}
 	function initial(){}	// reserved for customization
 	function mapping()
@@ -44,12 +44,6 @@ Class Controller extends Core
     {
 		$this->mapping();
 		$this->app = new $this->map['model']($this->conf);
-        if (!$this->app->session_auth()) {
-            $this->output($this->load_view('login'));
-        }
-        if (!$this->app->action_auth()) {
-            $this->output($this->load_view('invalid_access'));
-        }
         $this->app->handler($this->map['method'], $this->map['param']);
         $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY'))));
     }

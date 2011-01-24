@@ -10,14 +10,14 @@
 // -------------------------------------------------------------------------------+
 //
 
-class App extends Core
+class Model extends Core
 {
     public function session_auth() {return true;}
     public function action_auth()  {return true;}
 	function __construct($conf=null)
 	{
 		$this->conf = $conf;
-		$this->initial();
+		parent::__construct();
 	}
 	function initial(){}	// reserved for customization
 	function handler($method, $_sp_STACK)

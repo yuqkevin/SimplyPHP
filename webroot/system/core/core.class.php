@@ -12,6 +12,10 @@
 
 Class Core
 {
+	function __construct()
+	{
+		if (method_exists($this, 'initial')) $this->initial();
+	}
 	function request($name, $method=null)
 	{
 		if ($method!='get') {
@@ -26,7 +30,7 @@ Class Core
 		}
 		return trim(@$_GET[$name]);
 	}
-    function load_view($view_name, $bind)
+    function load_view($view_name, $bind=null)
     {
 		ob_flush();
         if (!$view_name) return $bind;
@@ -110,7 +114,10 @@ Class Core
             return true;
         }
         if (!isset($val)) return @$_SESSION[$name];
-		if (!$val) return unset($_SESSION[$name]);
+		if (!$val) {
+			unset($_SESSION[$name]);
+			return null;
+		}
         return $_SESSION[$name] = $val;
     }
     function logging($info, $log_file=null)
