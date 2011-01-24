@@ -1,36 +1,11 @@
 SimplyPHP
-1. MVC Structure
-   . system	Framework Root
-     + core Core module folder
-     + app	Application folder
-       + model 		appname.class.php
-         + handler
-           + appname/methodname.inc.php
-           + methodname.inc.php
-       + views
-         + appname/methodname.tpl.php
-         + methodname.tpl.php
-       + controller
-       + conf   application configure folder
-         + database.php
+SimplyPHP is a simple, fast and straightforward Web application development PHP framework.
+1. Installation
+   a. Get the newst SimplyPHP source package
+      Downloading Address: https://github.com/yuqkevin/SimplyPHP
+   b. Extract package at your web directory (e.g: /var/www/sp)
+   Congratulations! You have SimplyPHP working now.
+   Go to SimplyPHP installed URL (e.g http://localhost/sp) and a welcome message will be shown up.
 
-   
-2. URL Parse
-   . URL Format	http://domain.com/path1/path2/...?query_string
-   . Mapping	controller->mapping(), this function can be orverride by user's controller
-     . domain	=> Application model
-     . path1	=> method
-     . path2..	=> parameter stack
-   . View	controlled by app variable this->stream['view']
-     . Default	views/class/method.tpl.php
-     . Share	views/method.tpl.php
-     . Customize	via overridding this->stream
-   . Output
-     . Binding		view,data,format(html,ajax,...);
-     . Application	$this->stream = array('view'=>view_name,'data'=>app_data,'format'=>format);
-
-I. Reserved Word
-   . Generally, names with prefix '_sp_' are reserved for SimplyPHP, e.g. $_sp_STACK,...
-   . _ENTRY  Controller URL convertion
-
-II. Samples
+2. User Guide
+   Please see: https://github.com/yuqkevin/SimplyPHP/wiki
