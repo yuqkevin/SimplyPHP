@@ -1,7 +1,7 @@
 SimplyPHP
 SimplyPHP is a simple, fast and straightforward Web application development PHP framework.
 1. Installation
-   a. Get the newst SimplyPHP source package
+   a. Get the newest SimplyPHP source package
       Downloading Address: https://github.com/yuqkevin/SimplyPHP
    b. Extract package at your web directory (e.g: /var/www/sp)
    Congratulations! You have SimplyPHP working now.
