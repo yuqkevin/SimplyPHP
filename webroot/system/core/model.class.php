@@ -1,10 +1,10 @@
 <?php
 // -------------------------------------------------------------------------------+
-// | Name: App - Base class and common mthods shared by application modules       |
+// | Name: Model - Base class and common mthods shared by application modules     |
 // +------------------------------------------------------------------------------+
-// | Package: Simply PHP Framework                                                |
+// | Package: SimplyPHP Framework                                                 |
 // +------------------------------------------------------------------------------+
-// | Author:  Kevin Q. Yu <kevin@cgtvgames.com>                                   |
+// | Author:  Kevin Q. Yu <kevin@w3softwares.com>                                 |
 // -------------------------------------------------------------------------------+
 // | Release: 2011.01.18                                                          |
 // -------------------------------------------------------------------------------+
