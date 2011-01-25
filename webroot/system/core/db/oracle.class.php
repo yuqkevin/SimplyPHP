@@ -3,10 +3,12 @@
 // | Name: Oracle - Oracle implement of Dao                                       |
 // +------------------------------------------------------------------------------+
 // | Package: Simply PHP Framework                                                |
-// +------------------------------------------------------------------------------+
-// | Author:  Kevin Q. Yu <kevin@cgtvgames.com>                                   |
 // -------------------------------------------------------------------------------+
-// | Issued: 2010.07.19                                                           |
+// | Repository: https://github.com/yuqkevin/SimplyPHP/                           |
+// +------------------------------------------------------------------------------+
+// | Author:  Kevin Q. Yu                                                         |
+// -------------------------------------------------------------------------------+
+// | Checkout: 2011.01.19                                                         |
 // +------------------------------------------------------------------------------+
 
 class Oracle extends Dao
@@ -33,7 +35,7 @@ class Oracle extends Dao
             OCIFetchInto($pth, $row, OCI_NUM);
         } elseif ($type==ASSOC) {
             OCIFetchInto($pth, $row, OCI_ASSOC);
-			$row = array_change_key_case($row, CASE_LOWER);
+			if (is_array($row)) $row=array_change_key_case($row, CASE_LOWER);
         } elseif ($type==LOB) {
             OCIFetchInto($pth, $row, OCI_RETURN_LOBS);
         } else {
@@ -51,7 +53,7 @@ class Oracle extends Dao
             OCIFetchInto($pth, $row, OCI_NUM);
         } elseif ($type==ASSOC) {
             OCIFetchInto($pth, $row, OCI_ASSOC);
-			$row = array_change_key_case($row, CASE_LOWER);
+			if (is_array($row)) $row=array_change_key_case($row, CASE_LOWER);
         } elseif ($type==LOB) {
             OCIFetchInto($pth, $row, OCI_RETURN_LOBS);
         } else {
@@ -90,15 +92,15 @@ class Oracle extends Dao
 	{
 		return $this->updateDB("alter session set $name='$val'");
 	}
-    function procRun($query)
-    {
+	function procedure($query, $param=array('status'=>2))
+	{
         if (!isset($this->conn)) $this->connect();
         $pth = OCIParse($this->conn,$query) or $this->_err($this->conn);
-        OCIBindByName($pth,":status",$status,2);
+        foreach ($param as $key=>$max_val) OCIBindByName($pth,":$key",&$param[$key]);
         $hd = OCIExecute($pth)  or $this->_err($pth);
         OCIFreeStatement($pth) or $this->_err($hd);
-        return $status;
-    }
+        return count(array_keys($param))===1?array_shift(array_values($param)):$param;
+	}
     public function table_search($table, $filter=null, $suffix=null, $fields='*')
     {
         if (is_array($table)) {
