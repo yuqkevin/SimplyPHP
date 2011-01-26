@@ -114,6 +114,10 @@ class Oracle extends Dao
         }
         $query .= ' '.$suffix;
 		$query = $this->limit_rows($query);
+        if (strtolower($fields)=='count(*)') {
+            $r = $this->fetchOneRow($query);
+            return intval(@$r[0]);
+        }
         $lines = array();
         $hd = $this->sql_prepare($query);
         while ($r=$this->fetchByROw($hd, ASSOC)) $lines[] = $r;
