@@ -85,6 +85,10 @@ abstract class Dao
 			$query .= " where ".$this->param2field($filter, 'filter');
 		}
 		$query .= ' '.$suffix;
+        if (strtolower($fields)=='count(*)') {
+            $r = $this->fetchOneRow($query);
+            return intval(@$r[0]);
+        }
 		$lines = array();
 		$hd = $this->sql_prepare($query);
 		while ($r=$this->fetchByROw($hd, ASSOC)) $lines[] = $r;
