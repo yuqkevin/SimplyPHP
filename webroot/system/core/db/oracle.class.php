@@ -143,9 +143,9 @@ class Oracle extends Dao
 			return $sql;
 		}
         $limit = $start + $offset;
-        $newsql = "SELECT * FROM (select inner_query.*, rownum rnum FROM ($sql) inner_query WHERE rownum < $limit)";
+        $newsql = "SELECT * FROM (select inner_query.*, rownum rnum FROM ($sql) inner_query WHERE rownum<=$limit)";
         if ($start>0) {
-            $newsql .= " WHERE rnum >= $start";
+            $newsql .= " WHERE rnum>$start";
         }
         return $newsql;
     }
