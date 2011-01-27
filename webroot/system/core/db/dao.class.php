@@ -57,10 +57,10 @@ abstract class Dao
             $seq = null;
         }
         if (!isset($param[$pkey])) {
-			if ($table_info['seq']!=='auto') {
+			if ($seq&&$seq!=='auto') {
 	            list($id) = $this->fetchOneRow("select $seq.nextval from dual");
     	        $param[$pkey] = $id;
-        	} else {
+        	} elseif ($seq) {
             	$r = $this->fetchOneRow("select max($pkey) as PK from $table");
            		if (count($r)) {
                 	$param[$pkey] = $r[0]+1;
