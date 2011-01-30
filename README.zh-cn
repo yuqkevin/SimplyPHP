@@ -2,7 +2,8 @@ SimplyPHP 快速开发框架
 SimplyPHP是一个简单直观并且快速的PHP WEB应用开发开发框架。
 1. 安装
    a.获取最新SimplyPHP源代码包
-     下载网址：https://github.com/yuqkevin/SimplyPHP
+     . 下载网址：https://github.com/yuqkevin/SimplyPHP 或使用git获取
+     . git clone git://github.com/yuqkevin/SimplyPHP.git
    b.展开SimplyPHP到所要安装的Web目录下(如：/var/www/sp)
    恭喜您！SimplyPHP已经安装完毕，访问http://localhost/sp，即可进入SimplyPHP的欢迎页面。
 
