@@ -30,15 +30,26 @@ Class Core
 		}
 		return trim(@$_GET[$name]);
 	}
-    function load_view($view_name, $bind=null)
+    function load_view($view_name, $bind=null, $ext=null)
     {
-		ob_flush();
+        ob_flush();
         if (!$view_name) return $bind;
-		$class = strtolower(get_class($this));
-		$temp_base = APP_DIR."/views";
-        $template = $temp_base."/$class/$view_name.tpl.php";
-        if (!file_exists($template)) $template = $temp_base."/$view_name.tpl.php";
-		if (!file_exists($template)) return null;
+        $class = strtolower(get_class($this));
+        $temp_base = APP_DIR."/views";
+        $templates = array(
+            $temp_base."/$class/$view_name.tpl.php".$ext,
+            $temp_base."/$class/$view_name.tpl.php",
+            $temp_base."/$view_name.tpl.php".$ext,
+            $temp_base."/$view_name.tpl.php"
+        );
+        $template = null;
+        foreach ($templates as $temp) {
+            if (file_exists($temp)) {
+                $template = $temp;
+                break;
+            }
+        }
+        if (!$template) return null;
         if (is_array($bind) && array_keys($bind)!==range(0, count($bind)-1)) {
             foreach ($bind as $key=>$val) {
                 $$key = $val;
