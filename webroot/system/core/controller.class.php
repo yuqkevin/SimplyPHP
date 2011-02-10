@@ -55,3 +55,6 @@ Class Controller extends Core
         }
     }
 }
+if ($confs=scandir(APP_DIR."/conf")) {
+    foreach ($confs as $file) if (preg_match("/\.php$/i", $file)) include(APP_DIR."/conf/$file");
+}
