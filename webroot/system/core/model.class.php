@@ -2,11 +2,13 @@
 // -------------------------------------------------------------------------------+
 // | Name: Model - Base class and common mthods shared by application modules     |
 // +------------------------------------------------------------------------------+
-// | Package: SimplyPHP Framework                                                 |
-// +------------------------------------------------------------------------------+
-// | Author:  Kevin Q. Yu <kevin@w3softwares.com>                                 |
+// | Package: Simply PHP Framework                                                |
 // -------------------------------------------------------------------------------+
-// | Release: 2011.01.18                                                          |
+// | Repository: https://github.com/yuqkevin/SimplyPHP/                           |
+// +------------------------------------------------------------------------------+
+// | Author:  Kevin Q. Yu                                                         |
+// -------------------------------------------------------------------------------+
+// | Checkout: 2011.01.19                                                         |
 // -------------------------------------------------------------------------------+
 //
 
@@ -17,26 +19,27 @@ class Model extends Core
 	function __construct($conf=null)
 	{
 		$this->conf = $conf;
-		parent::__construct();
+		$this->initial();
 	}
 	function initial(){}	// reserved for customization
-	function handler($method, $_sp_STACK)
+	function handler($map)
 	{
-		$this->stream = array('view'=>$method,'data'=>null,'format'=>'html','param'=>$_sp_STACK);
+		$this->stream = $map;
 		$base_dir = APP_DIR."/model/handler";
-		$class = strtolower(get_class($this));
-		$handler = "$base_dir/$class/$method.inc.php";
-		if (!file_exists($handler)) $handler = "$base_dir/$method.inc.php";
-		if (file_exists($handler)) include($handler);
-		if (method_exists($this, $method)) call_user_func(array($this, $method), $this->stream['param']);
-        $content = $this->load_view($this->stream['view'], $this->stream['data']);
-        if ($content) $this->output($content, $this->stream['format']);
+		$class = strtolower($this->stream['model']);
+		$handler = "$base_dir/$class/{$this->stream['method']}.inc.php";
+		if (!file_exists($handler)) $handler = "$base_dir/{$this->stream['method']}.inc.php";
+		if (file_exists($handler)) {
+			include($handler);
+		} elseif (method_exists($this, $this->stream['method'])) {
+			call_user_func(array($this, $this->stream['method']), $this->stream['param']);
+		}
+        return $this->stream;
 	}
 	function load_db($dsn,$name=null)
 	{
 		if (!$name) $name = 'db';
 		$dbdriver = ucfirst(strtolower($dsn['dbdriver']));
-		if (!file_exists(CORE_DIR.'/db/'.strtolower($dbdriver).'.class.php')) return null;
 		if (!isset($this->$name)||!is_object($this->$name)) {
 			$this->$name = new $dbdriver($dsn);
 		}
@@ -97,7 +100,7 @@ class Model extends Core
         }
         return $opt;
     }
-	// external phpmailer package is required under model folder
+
     function sendmail($from, $to, $subject, $content, $param=array())
     {
 		$default = array(

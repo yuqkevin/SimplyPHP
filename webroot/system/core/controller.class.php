@@ -2,11 +2,13 @@
 // -------------------------------------------------------------------------------+
 // | Name: Controller                                                             |
 // +------------------------------------------------------------------------------+
-// | Package: SimplyPHP Framework                                                 |
-// +------------------------------------------------------------------------------+
-// | Author:  Kevin Q. Yu <kevin@w3softwares.com>                                 |
+// | Package: Simply PHP Framework                                                |
 // -------------------------------------------------------------------------------+
-// | Release: 2011.01.18                                                          |
+// | Repository: https://github.com/yuqkevin/SimplyPHP/                           |
+// +------------------------------------------------------------------------------+
+// | Author:  Kevin Q. Yu                                                         |
+// -------------------------------------------------------------------------------+
+// | Checkout: 2011.01.19                                                         |
 // -------------------------------------------------------------------------------+
 //
 function __autoload($class)
@@ -24,11 +26,11 @@ function __autoload($class)
 
 Class Controller extends Core
 {
-	var $map = array('model'=>'welcome','method'=>'index','param'=>null);
+    var $map = array('model'=>'welcome','method'=>'index','param'=>null,'view'=>'index','format'=>'html');
 	function __construct($conf=null)
 	{
 		$this->conf = $conf;
-		parent::__construct();
+		$this->initial();
 	}
 	function initial(){}	// reserved for customization
 	function mapping()
@@ -36,6 +38,7 @@ Class Controller extends Core
         if ($entry=$this->request('_ENTRY')) {
             $r = split('/', $entry);
             $this->map['method'] = array_shift($r);
+			$this->map['view'] = strtolower($this->map['model']).'/'.$this->map['method'];
             if (count($r)) $this->map['param'] = $r;
         }
 		return $this->map;
@@ -44,7 +47,11 @@ Class Controller extends Core
     {
 		$this->mapping();
 		$this->app = new $this->map['model']($this->conf);
-        $this->app->handler($this->map['method'], $this->map['param']);
-        $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY'))));
+        $stream = $this->app->handler($this->map);
+        if ($content=$this->load_view($stream['view'], $stream['data'])) {
+            $this->output($content, $stream['format']);
+        } else {
+            $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY'))));
+        }
     }
 }

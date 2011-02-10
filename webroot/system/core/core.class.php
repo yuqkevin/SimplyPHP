@@ -2,20 +2,18 @@
 // -------------------------------------------------------------------------------+
 // | Name: Core - I/O class for both Controller and App model                     |
 // +------------------------------------------------------------------------------+
-// | Package: SimplyPHP Framework                                                 |
-// +------------------------------------------------------------------------------+
-// | Author:  Kevin Q. Yu <kevin@w3softwares.com>                                 |
+// | Package: Simply PHP Framework                                                |
 // -------------------------------------------------------------------------------+
-// | Release: 2011.01.18                                                          |
+// | Repository: https://github.com/yuqkevin/SimplyPHP/                           |
+// +------------------------------------------------------------------------------+
+// | Author:  Kevin Q. Yu                                                         |
+// -------------------------------------------------------------------------------+
+// | Checkout: 2011.01.19                                                         |
 // -------------------------------------------------------------------------------+
 //
 
 Class Core
 {
-	function __construct()
-	{
-		if (method_exists($this, 'initial')) $this->initial();
-	}
 	function request($name, $method=null)
 	{
 		if ($method!='get') {
@@ -32,24 +30,21 @@ Class Core
 	}
     function load_view($view_name, $bind=null, $ext=null)
     {
-        ob_flush();
+		ob_flush();
         if (!$view_name) return $bind;
-        $class = strtolower(get_class($this));
-        $temp_base = APP_DIR."/views";
+		$temp_base = APP_DIR."/views";
         $templates = array(
-            $temp_base."/$class/$view_name.tpl.php".$ext,
-            $temp_base."/$class/$view_name.tpl.php",
-            $temp_base."/$view_name.tpl.php".$ext,
-            $temp_base."/$view_name.tpl.php"
-        );
-        $template = null;
-        foreach ($templates as $temp) {
-            if (file_exists($temp)) {
-                $template = $temp;
-                break;
-            }
-        }
-        if (!$template) return null;
+			$temp_base."/$view_name.tpl.php".$ext,
+			$temp_base."/$view_name.tpl.php"
+		);
+		$template = null;
+		foreach ($templates as $temp) {
+	        if (file_exists($temp)) {
+				$template = $temp;
+				break;
+			}
+		}
+		if (!$template) return null;
         if (is_array($bind) && array_keys($bind)!==range(0, count($bind)-1)) {
             foreach ($bind as $key=>$val) {
                 $$key = $val;
@@ -125,10 +120,6 @@ Class Core
             return true;
         }
         if (!isset($val)) return @$_SESSION[$name];
-		if (!$val) {
-			unset($_SESSION[$name]);
-			return null;
-		}
         return $_SESSION[$name] = $val;
     }
     function logging($info, $log_file=null)
