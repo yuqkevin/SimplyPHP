@@ -14,11 +14,19 @@
 
 class Model extends Core
 {
-    public function session_auth() {return true;}
-    public function action_auth()  {return true;}
+	protected $dsn_name = null;
+	protected $tables = null;
+    function session_auth() {return true;}
+    function action_auth()  {return true;}
 	function __construct($conf=null)
 	{
 		$this->conf = $conf;
+		if ($this->dsn_name) {
+			$this->db = $this->load_db($this->conf['dsn'][$this->dsn_name]);
+			if (is_array($this->tables)) {
+				foreach ($this->tables as $name=>$def) $this->$name = new TableObject($def, $this->db);
+			}
+		}
 		$this->initial();
 	}
 	function initial(){}	// reserved for customization
@@ -45,10 +53,6 @@ class Model extends Core
 		}
 		return $this->$name;
 	}
-    function param($key=null)
-    {
-        return isset($key)?@$this->param_page[$key]:$this->param_page;
-    }
 
 	function logout()
 	{
@@ -153,4 +157,34 @@ class Model extends Core
         }
         return $ok;
     }
+}
+
+Class TableObject
+{
+	protected $table = null;
+	function __construct($table,$db)
+	{
+		$this->table = $table;
+		$this->db = $db;
+	}
+	function read($id)
+	{
+		return $id?$this->db->table_proc($this->table, $id):null;
+	}
+	function search($filter, $suffix=null, $fields='*')
+	{
+		return $this->db->table_serach($this->table['name'], $filter, $suffix, $fields);
+	}
+	function create($param)
+	{
+		return is_array($param)&&count(array_keys($param))?$this->db->table_proc($this->table, 0, $param):null;
+	}
+	function delete($id)
+	{
+		return $id?$this->db->table_proc($this->table, $id, 'delete'):null;
+	}
+	function update($id, $param)
+	{
+		return $id?$this->db->table_proc($this->table, $id, $param):null;
+	}
 }

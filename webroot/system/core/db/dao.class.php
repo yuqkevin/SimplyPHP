@@ -39,34 +39,41 @@ abstract class Dao
         $pkey = $table_info['pkey'];
         $seq = @$table_info['seq'];
 		if (isset($table_info['schema'])) $seq = $table_info['schema'].".$seq";
+		if (is_array($id)) {
+			$pk_filter = $this->param2field($id, 'filter');
+		} else {
+			$pk_filter = "$pkey='$id'";
+		}
         if (!$param) {
-            return $this->fetchOneRow("select * from $table where $pkey='$id'", ASSOC);
+            return $this->fetchOneRow("select * from $table where $pk_filter", ASSOC);
         } elseif ($id && $param && !is_array($param)) {
             if ($param==='delete') {
-                return $this->updateDB("delete $table where $pkey='$id'");
+                return $this->updateDB("delete $table where $pk_filter");
             }
             return null;   // invalid param
         }
         if ($id) {
-            list($cnt) = $this->fetchOneRow("select count(*) from $table where $pkey='$id'");
+            list($cnt) = $this->fetchOneRow("select count(*) from $table where $pk_filter");
             if ($cnt) {
 				$set_str = $this->param2field($param, 'set');
-                return $this->updateDB("update $table set $set_str where $pkey='$id'");
+                return $this->updateDB("update $table set $set_str where $pk_filter");
             }
+			if (is_array($id)||$seq!=='fkey') return null;
             $param[$pkey] = $id;
-            $seq = null;
         }
-        if (!isset($param[$pkey])) {
-			if ($seq&&$seq!=='auto') {
-	            list($id) = $this->fetchOneRow("select $seq.nextval from dual");
-    	        $param[$pkey] = $id;
-        	} elseif ($seq) {
+        if (!isset($param[$pkey])||!$param[$pkey]) {
+			if ($seq==='fkey') {
+				return null;
+        	} elseif ($seq==='auto') {
             	$r = $this->fetchOneRow("select max($pkey) as PK from $table");
            		if (count($r)) {
                 	$param[$pkey] = $r[0]+1;
             	} else {
                 	$param[$pkey] = 1;
             	}
+			} elseif ($seq) {
+	            list($id) = $this->fetchOneRow("select $seq.nextval from dual");
+    	        $param[$pkey] = $id;
 			}
         }
 		$pair = $this->param2field($param, 'insert');
