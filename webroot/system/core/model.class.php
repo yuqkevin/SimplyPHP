@@ -48,7 +48,7 @@ class Model extends Core
 	{
 		if (!$name) $name = 'db';
 		$dbdriver = ucfirst(strtolower($dsn['dbdriver']));
-		if (!isset($this->$name)||!is_object($this->$name)) {
+		if ($dbdriver&&(!isset($this->$name)||!is_object($this->$name))) {
 			$this->$name = new $dbdriver($dsn);
 		}
 		return $this->$name;
