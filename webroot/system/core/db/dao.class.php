@@ -21,7 +21,7 @@ abstract class Dao
     abstract function insertDB($query);
     abstract protected function connect($dsn=null);
 	abstract protected function _err($msg=null);
-	public function __construct($dsn)
+	function __construct($dsn)
 	{
 		$this->dsn = $dsn;
 		$this->connect();
@@ -101,6 +101,13 @@ abstract class Dao
 		while ($r=$this->fetchByROw($hd, ASSOC)) $lines[] = $r;
 		return count($lines)?$lines:null;
 	}
+	/** Instancing table objects **/
+	final function tables($tables)
+	{
+		if (is_array($tables)) {
+			foreach ($tables as $name=>$def) $this->$name = new TableObject($def, $this);
+		}
+	}
 	final function param2field($param, $type)
 	{
 		$result = null;
@@ -140,4 +147,36 @@ abstract class Dao
 		return str_replace("'", "''", $str);
 	}
 }
-?>
+
+/*** Table Object ***
+ *	Generic Database Table Operations
+***/
+Class TableObject
+{
+	protected $table = null;
+	function __construct($table, $db)
+	{
+		$this->table = $table;
+		$this->db = $db;
+	}
+	function read($id)
+	{
+		return $id?$this->db->table_proc($this->table, $id):null;
+	}
+	function search($filter, $suffix=null, $fields='*')
+	{
+		return $this->db->table_serach($this->table['name'], $filter, $suffix, $fields);
+	}
+	function create($param)
+	{
+		return is_array($param)&&count(array_keys($param))?$this->db->table_proc($this->table, 0, $param):null;
+	}
+	function delete($id)
+	{
+		return $id?$this->db->table_proc($this->table, $id, 'delete'):null;
+	}
+	function update($id, $param)
+	{
+		return $id?$this->db->table_proc($this->table, $id, $param):null;
+	}
+}

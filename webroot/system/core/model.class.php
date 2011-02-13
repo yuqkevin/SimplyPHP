@@ -23,9 +23,7 @@ class Model extends Core
 		$this->conf = $conf;
 		if ($this->dsn_name) {
 			$this->db = $this->load_db($this->conf['dsn'][$this->dsn_name]);
-			if (is_array($this->tables)) {
-				foreach ($this->tables as $name=>$def) $this->$name = new TableObject($def, $this->db);
-			}
+			if ($this->db&&is_array($this->tables)) $this->db->tables($this->tables);
 		}
 		$this->initial();
 	}
@@ -51,7 +49,7 @@ class Model extends Core
 		if ($dbdriver&&(!isset($this->$name)||!is_object($this->$name))) {
 			$this->$name = new $dbdriver($dsn);
 		}
-		return $this->$name;
+		return $dbdriver?$this->$name:null;
 	}
 
 	function logout()
@@ -157,34 +155,4 @@ class Model extends Core
         }
         return $ok;
     }
-}
-
-Class TableObject
-{
-	protected $table = null;
-	function __construct($table,$db)
-	{
-		$this->table = $table;
-		$this->db = $db;
-	}
-	function read($id)
-	{
-		return $id?$this->db->table_proc($this->table, $id):null;
-	}
-	function search($filter, $suffix=null, $fields='*')
-	{
-		return $this->db->table_serach($this->table['name'], $filter, $suffix, $fields);
-	}
-	function create($param)
-	{
-		return is_array($param)&&count(array_keys($param))?$this->db->table_proc($this->table, 0, $param):null;
-	}
-	function delete($id)
-	{
-		return $id?$this->db->table_proc($this->table, $id, 'delete'):null;
-	}
-	function update($id, $param)
-	{
-		return $id?$this->db->table_proc($this->table, $id, $param):null;
-	}
 }

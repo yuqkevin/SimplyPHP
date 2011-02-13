@@ -11,6 +11,7 @@
 // | Checkout: 2011.01.19                                                         |
 // -------------------------------------------------------------------------------+
 //
+
 function __autoload($class)
 {
 	$file_name = strtolower($class).'.class.php';
@@ -26,11 +27,22 @@ function __autoload($class)
 
 Class Controller extends Core
 {
-    var $map = array('model'=>'welcome','method'=>'index','param'=>null,'view'=>'index','format'=>'html');
-	function __construct($conf=null)
+	protected $conf = null;
+    protected $map = array('model'=>'welcome','method'=>'index','param'=>null,'view'=>'index','data'=>null,'format'=>'html');
+	function __construct()
 	{
-		$this->conf = $conf;
+		$this->configure();
 		$this->initial();
+	}
+	function configure()
+	{
+		$confs = array('database', 'common', $this->request('_DOMAIN'));
+		$conf_dir = APP_DIR."/conf";
+    	foreach ($confs as $conf_file) {
+			$file = "$conf_dir/$conf_file.php";
+			if (file_exists($file)) include($file);
+		}
+		$this->conf = $conf;
 	}
 	function initial(){}	// reserved for customization
 	function mapping()
@@ -54,7 +66,4 @@ Class Controller extends Core
             $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY'))));
         }
     }
-}
-if ($confs=scandir(APP_DIR."/conf")) {
-    foreach ($confs as $file) if (preg_match("/\.php$/i", $file)) include(APP_DIR."/conf/$file");
 }

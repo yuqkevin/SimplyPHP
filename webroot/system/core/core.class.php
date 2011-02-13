@@ -16,6 +16,7 @@ Class Core
 {
 	function request($name, $method=null)
 	{
+		$method = strtolower($method);
 		if ($method!='get') {
 			$magic = get_magic_quotes_gpc();
 			if (isset($_POST[$name])&&is_array($_POST[$name])) {
@@ -25,12 +26,17 @@ Class Core
 			} elseif ($method==='post'||isset($_POST[$name])) {
 				return trim($magic?stripslashes(@$_POST[$name]):@$_POST[$name]);
 			}
+			if ($name==='_DOMAIN') {
+				$r = preg_split("/\./", strtolower($_SERVER['HTTP_HOST']));
+				if ($r[0]==='www') array_shift($r);
+				return join('.', $r);
+			}
 		}
 		return trim(@$_GET[$name]);
 	}
     function load_view($view_name, $bind=null, $ext=null)
     {
-		ob_flush();
+		if (ob_get_contents()) ob_flush();
         if (!$view_name) return $bind;
 		$temp_base = APP_DIR."/views";
         $templates = array(
