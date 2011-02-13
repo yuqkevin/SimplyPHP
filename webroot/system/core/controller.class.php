@@ -49,6 +49,7 @@ Class Controller extends Core
 	{
         if ($entry=$this->request('_ENTRY')) {
             $r = split('/', $entry);
+			$this->map['model'] = $this->map['model']?$this->map['model']:array_shift($r);
             $this->map['method'] = array_shift($r);
 			$this->map['view'] = strtolower($this->map['model']).'/'.$this->map['method'];
             if (count($r)) $this->map['param'] = $r;
