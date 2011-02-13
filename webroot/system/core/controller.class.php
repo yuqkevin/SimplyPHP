@@ -22,6 +22,7 @@ function __autoload($class)
 			return true;
 		}
 	}
+	throw new Exception("Unable to load $class.");
     return false;
 }
 
@@ -47,10 +48,10 @@ Class Controller extends Core
 	function initial(){}	// reserved for customization
 	function mapping()
 	{
-        if ($entry=$this->request('_ENTRY')) {
+        if ($entry=preg_replace("|^/+|",'', $this->request('_ENTRY'))) {
             $r = split('/', $entry);
 			$this->map['model'] = $this->map['model']?$this->map['model']:array_shift($r);
-            $this->map['method'] = array_shift($r);
+            $this->map['method'] = count($r)?array_shift($r):'index';
 			$this->map['view'] = strtolower($this->map['model']).'/'.$this->map['method'];
             if (count($r)) $this->map['param'] = $r;
         }
@@ -59,12 +60,22 @@ Class Controller extends Core
     function boot()
     {
 		$this->mapping();
-		$this->app = new $this->map['model']($this->conf);
-        $stream = $this->app->handler($this->map);
-        if ($content=$this->load_view($stream['view'], $stream['data'])) {
-            $this->output($content, $stream['format']);
-        } else {
-            $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY'))));
-        }
+		if (!$this->map['model']) {
+			if (!$this->conf['model']) {
+				$this->output($this->load_view('welcome'));
+			}
+			$this->map['model'] = $this->conf['model'];
+		}
+		try {
+			$this->app = new $this->map['model']($this->conf);
+            $stream = $this->app->handler($this->map);
+            if ($content=$this->load_view($stream['view'], $stream['data'])) {
+                $this->output($content, $stream['format']);
+            } else {
+                $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY'))));
+            }
+		} catch (Exception $e) {
+		    $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY'))));
+		}
     }
 }
