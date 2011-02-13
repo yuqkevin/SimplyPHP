@@ -28,7 +28,7 @@ function __autoload($class)
 Class Controller extends Core
 {
 	protected $conf = null;
-    protected $map = array('model'=>'welcome','method'=>'index','param'=>null,'view'=>'index','data'=>null,'format'=>'html');
+    protected $map = array('model'=>null,'method'=>'index','param'=>null,'view'=>'index','data'=>null,'format'=>'html');
 	function __construct()
 	{
 		$this->configure();

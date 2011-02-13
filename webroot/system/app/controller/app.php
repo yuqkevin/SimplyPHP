@@ -17,8 +17,11 @@ Class AppController extends Controller
 {
 	function initial()
 	{
-		$this->map['model'] = 'welcome';
-        if ($this->request('act')=='logout') $this->app->logout();
+		if ($this->request('_ENTRY')=='/'||!$this->request('_ENTRY')) {
+			// set up application model for root entry
+			# $this->map['model'] = 'your_main_model';
+			$this->output($this->load_view('welcome'));
+		}
 	}
 }
 $app = new AppController;
