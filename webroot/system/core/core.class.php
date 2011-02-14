@@ -51,6 +51,10 @@ Class Core
 			}
 		}
 		if (!$template) return null;
+		return $this->load_template($template, $bind);
+	}
+	function load_template($template, $bind=null)
+	{
         if (is_array($bind) && array_keys($bind)!==range(0, count($bind)-1)) {
             foreach ($bind as $key=>$val) {
                 $$key = $val;
