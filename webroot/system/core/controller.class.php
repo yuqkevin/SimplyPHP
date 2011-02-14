@@ -48,7 +48,7 @@ Class Controller extends Core
 	function initial(){}	// reserved for customization
 	function mapping()
 	{
-        if ($entry=preg_replace("|^/+|",'', $this->request('_ENTRY'))) {
+        if ($entry=preg_replace(array("|^/+|","|/+$|"),array('',''), $this->request('_ENTRY'))) {
             $r = split('/', $entry);
 			$this->map['model'] = $this->map['model']?$this->map['model']:array_shift($r);
             $this->map['method'] = count($r)?array_shift($r):'index';
