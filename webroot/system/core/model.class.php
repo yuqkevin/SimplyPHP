@@ -76,7 +76,7 @@ class Model extends Core
 		}
 		return $array;
 	}
-	function hasharray_options($lines, $in=null, $field_key, $field_val=null)
+	function hasharray_options($lines, $field_key, $field_val=null, $in=null)
 	{
 		$result = null;
 		foreach ($lines as $line) {
