@@ -69,7 +69,7 @@ Class Controller extends Core
 		try {
 			$this->app = new $this->map['model']($this->conf);
             $stream = $this->app->handler($this->map);
-            if ($content=$this->load_view($stream['view'], $stream['data'])) {
+            if ($content=$this->app->load_view($stream['view'], $stream['data'])) {
                 $this->output($content, $stream['format']);
             } else {
                 $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY'))));
