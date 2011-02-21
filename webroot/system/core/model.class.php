@@ -18,6 +18,8 @@ class Model extends Core
 	protected $tables = null;
     function session_auth() {return true;}
     function action_auth()  {return true;}
+	function initial(){}	// reserved for customization
+	function load_module(){} // loading app inner module
 	function __construct($conf=null)
 	{
 		$this->conf = $conf;
@@ -27,7 +29,6 @@ class Model extends Core
 		}
 		$this->initial();
 	}
-	function initial(){}	// reserved for customization
 	function handler($map)
 	{
 		$this->stream = $map;
@@ -39,6 +40,8 @@ class Model extends Core
 			include($handler);
 		} elseif (method_exists($this, $this->stream['method'])) {
 			call_user_func(array($this, $this->stream['method']), $this->stream['param']);
+		} else {
+			$this->load_module();
 		}
         return $this->stream;
 	}
