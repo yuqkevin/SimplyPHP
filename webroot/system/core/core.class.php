@@ -36,9 +36,12 @@ Class Core
 	}
     function load_view($view_name, $bind=null, $ext=null)
     {
-		if (ob_get_contents()) ob_flush();
-        if (!$view_name) return $bind;
 		$temp_base = APP_DIR."/views";
+		return $this->load_template($temp_base, $view_name, $bind, $ext);
+	}
+	function load_template($temp_base, $view_name, $bind=null, $ext=null)
+	{
+        if (!$view_name) return $bind;
         $templates = array(
 			$temp_base."/$view_name.tpl.php".$ext,
 			$temp_base."/$view_name.tpl.php"
@@ -51,15 +54,12 @@ Class Core
 			}
 		}
 		if (!$template) return null;
-		return $this->load_template($template, $bind);
-	}
-	function load_template($template, $bind=null)
-	{
         if (is_array($bind) && array_keys($bind)!==range(0, count($bind)-1)) {
             foreach ($bind as $key=>$val) {
                 $$key = $val;
             }
         }
+		if (ob_get_contents()) ob_flush();
         ob_start();
         include $template;
         $content = ob_get_contents();
