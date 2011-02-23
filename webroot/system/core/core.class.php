@@ -60,6 +60,7 @@ Class Core
                 $$key = $val;
             }
         }
+		if (ob_get_contents()) ob_flush();
         ob_start();
         include $template;
         $content = ob_get_contents();
