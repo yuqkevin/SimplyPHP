@@ -37,15 +37,16 @@ Class Core
     function load_view($view_name, $bind=null, $ext=null)
     {
 		$temp_base = APP_DIR."/views";
-		return $this->load_template($temp_base, $view_name, $bind, $ext);
+		if (ob_get_contents()) ob_flush();
+		return $this->load_template($temp_base, $view_name, $bind);
 	}
 	function load_template($temp_base, $view_name, $bind=null, $ext=null)
 	{
         if (!$view_name) return $bind;
-        $templates = array(
-			$temp_base."/$view_name.tpl.php".$ext,
-			$temp_base."/$view_name.tpl.php"
-		);
+        $templates = array($temp_base."/$view_name.tpl.php");
+		if ($ext||($ext=$this->template_ext())) {
+			array_unshift($templates, $temp_base."/$view_name.tpl.php".$ext);
+		}
 		$template = null;
 		foreach ($templates as $temp) {
 	        if (file_exists($temp)) {
@@ -59,7 +60,6 @@ Class Core
                 $$key = $val;
             }
         }
-		if (ob_get_contents()) ob_flush();
         ob_start();
         include $template;
         $content = ob_get_contents();
@@ -121,6 +121,10 @@ Class Core
         }
         exit;
     }
+	public function template_ext()
+	{
+		return defined('EXT')?EXT:null;
+	}
     function mysession($name, $val=null)
     {
         if (!session_id()) session_start();

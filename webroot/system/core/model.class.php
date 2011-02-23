@@ -14,6 +14,7 @@
 
 class Model extends Core
 {
+	public $stream = null;
 	protected $dsn_name = null;
 	protected $tables = null;
     function session_auth() {return true;}
