@@ -44,7 +44,7 @@ Class Core
 	{
         if (!$view_name) return $bind;
         $templates = array($temp_base."/$view_name.tpl.php");
-		if ($ext||($ext=$this->template_ext())) {
+		if (isset($ext)||($ext=$this->template_ext())) {
 			array_unshift($templates, $temp_base."/$view_name.tpl.php".$ext);
 		}
 		$template = null;
