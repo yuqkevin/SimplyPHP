@@ -161,11 +161,22 @@ Class TableObject
 	}
 	function read($id)
 	{
-		return $id?$this->db->table_proc($this->table, $id):null;
+		$info = null;
+		if ($id) {
+			$info = $this->db->table_proc($this->table, $id);
+			$info = $this->prefix($info, 'off');
+		}
+		return $info;
 	}
 	function search($filter, $suffix=null, $fields='*')
 	{
-		return $this->db->table_serach($this->table['name'], $filter, $suffix, $fields);
+		$filter = $this->prefix($filter, 'on');
+		if ($lines=$this->db->table_serach($this->table['name'], $filter, $suffix, $fields)) {
+			if (@$this->table['prefix']) {
+				for ($i=0; $i<count($lines); $i++) $lines[$i] = $this->prefix($lines[$i],'off');
+			}
+		}
+		return $lines;
 	}
 	function create($param)
 	{
@@ -178,5 +189,19 @@ Class TableObject
 	function update($id, $param)
 	{
 		return $id?$this->db->table_proc($this->table, $id, $param):null;
+	}
+	function prefix($hash, $onoff)
+	{
+		$prefix = strtolower(@$this->table['prefix']);
+		if (!$prefix||!$hash) return $hash;
+		foreach ($hash as $key=>$val) {
+			if ($onoff==='on') {
+				$key = $prefix.'_'.$key;
+			} elseif ($onoff==='off'&&strpos($key, $prefix)!==false) {
+				$key = substr($key, strpos($key, $prefix)+2);
+			}
+			$hash[$key] = $val;
+		}
+		return $hash;
 	}
 }
