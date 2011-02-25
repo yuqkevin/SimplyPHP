@@ -38,7 +38,7 @@ Class Core
     {
 		$temp_base = APP_DIR."/views";
 		if (ob_get_contents()) ob_flush();
-		return $this->load_template($temp_base, $view_name, $bind);
+		return $this->load_template($temp_base, $view_name, $bind, $ext);
 	}
 	function load_template($temp_base, $view_name, $bind=null, $ext=null)
 	{

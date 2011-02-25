@@ -29,7 +29,7 @@ function __autoload($class)
 Class Controller extends Core
 {
 	protected $conf = null;
-    protected $map = array('model'=>null,'method'=>'index','param'=>null,'view'=>'index','data'=>null,'format'=>'html');
+    protected $map = array('model'=>null,'method'=>'index','param'=>null,'view'=>'index','data'=>null,'format'=>'html','suffix'=>null);
 	function __construct()
 	{
 		$this->configure();
@@ -69,13 +69,13 @@ Class Controller extends Core
 		try {
 			$this->app = new $this->map['model']($this->conf);
             $stream = $this->app->handler($this->map);
-            if ($content=$this->app->load_view($stream['view'], $stream['data'])) {
+            if ($content=$this->app->load_view($stream['view'], $stream['data'], $stram['suffix'])) {
                 $this->output($content, $stream['format']);
             } else {
-                $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY'))));
+                $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY')),$stram['suffix']));
             }
 		} catch (Exception $e) {
-		    $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY'))));
+		    $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY')),$stram['suffix']));
 		}
     }
 }

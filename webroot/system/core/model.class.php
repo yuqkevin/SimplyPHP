@@ -17,8 +17,6 @@ class Model extends Core
 	public $stream = null;
 	protected $dsn_name = null;
 	protected $tables = null;
-    function session_auth() {return true;}
-    function action_auth()  {return true;}
 	function initial(){}	// reserved for customization
 	function load_module(){} // loading app inner module
 	function __construct($conf=null)
@@ -32,7 +30,7 @@ class Model extends Core
 	}
 	function handler($map)
 	{
-		$this->stream = $map;
+		$this->stream = array_merge($map, $this->stream);
 		$base_dir = APP_DIR."/model/handler";
 		$class = strtolower($this->stream['model']);
 		$handler = "$base_dir/$class/{$this->stream['method']}.inc.php";
