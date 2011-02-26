@@ -30,7 +30,7 @@ class Model extends Core
 	}
 	function handler($map)
 	{
-		$this->stream = array_merge($map, $this->stream);
+		$this->stream = array_merge($map, (array)$this->stream);
 		$base_dir = APP_DIR."/model/handler";
 		$class = strtolower($this->stream['model']);
 		$handler = "$base_dir/$class/{$this->stream['method']}.inc.php";

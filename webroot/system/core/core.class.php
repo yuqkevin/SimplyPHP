@@ -14,33 +14,41 @@
 
 Class Core
 {
-	function request($name, $method=null)
+	public function request($name, $method=null)
 	{
 		$method = strtolower($method);
+		if ($method&&!$name) {
+			return $method=='get'?$_GET:$this->_postvars($_POST);
+		}
 		if ($method!='get') {
-			$magic = get_magic_quotes_gpc();
-			if (isset($_POST[$name])&&is_array($_POST[$name])) {
-				$param = array();
-				foreach ($_POST as $k=>$v) $param[$k] = trim($magic?stripslashes($v):$v);
-				return $param;
-			} elseif ($method==='post'||isset($_POST[$name])) {
-				return trim($magic?stripslashes(@$_POST[$name]):@$_POST[$name]);
-			}
+			if ($val=$this->_postvars($_POST, $name)) return $val;
 			if ($name==='_DOMAIN') {
 				$r = preg_split("/\./", strtolower($_SERVER['HTTP_HOST']));
 				if ($r[0]==='www') array_shift($r);
 				return join('.', $r);
+			} elseif ($name==='_URL') {
+				return isset($_GET['_ENTRY'])?$_GET['_ENTRY']:$_SERVER['PHP_SELF'];
 			}
 		}
 		return trim(@$_GET[$name]);
 	}
-    function load_view($view_name, $bind=null, $ext=null)
+	private function _postvars($post, $key=null)
+	{
+		$magic = get_magic_quotes_gpc();
+		if ($key&&!isset($_POST[$key])) return null;
+		foreach ($post as $k=>$v) {
+			if ($key&&$k!==$key) continue;
+			$post[$k] = is_array($v)?$this->_postvars($v):trim($magic?stripslashes($v):$v);
+		}
+		return $key?$post[$key]:$post;
+	}
+    public function load_view($view_name, $bind=null, $ext=null)
     {
 		$temp_base = APP_DIR."/views";
 		if (ob_get_contents()) ob_flush();
 		return $this->load_template($temp_base, $view_name, $bind, $ext);
 	}
-	function load_template($temp_base, $view_name, $bind=null, $ext=null)
+	public function load_template($temp_base, $view_name, $bind=null, $ext=null)
 	{
         if (!$view_name) return $bind;
         $templates = array($temp_base."/$view_name.tpl.php");
@@ -67,12 +75,12 @@ Class Core
         ob_end_clean();
         return $content;
     }
-	function location($url)
+	public function location($url)
 	{
 		header("location:$url");
 		exit;
 	}
-    function file_download($filename, $body)
+    public function file_download($filename, $body)
     {
         header("Pragma: public");
         header("Expires: 0");
@@ -126,7 +134,7 @@ Class Core
 	{
 		return defined('EXT')?EXT:null;
 	}
-    function mysession($name, $val=null)
+    public function mysession($name, $val=null)
     {
         if (!session_id()) session_start();
         if ($name=='clear') {
@@ -137,7 +145,7 @@ Class Core
         if (!isset($val)) return @$_SESSION[$name];
         return $_SESSION[$name] = $val;
     }
-    function logging($info, $log_file=null)
+    public function logging($info, $log_file=null)
     {
         if (!$log_file) $log_file = APP_DIR. '/logs/'.strtolower(get_class($this)).'.log';
         $log_info = sprintf("%s %s\n",date('Y-m-d H:i:s'),$info);
