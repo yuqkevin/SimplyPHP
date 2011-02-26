@@ -29,12 +29,13 @@ function __autoload($class)
 Class Controller extends Core
 {
 	protected $conf = null;
-    protected $map = array('model'=>null,'method'=>'index','param'=>null,'view'=>'index','data'=>null,'format'=>'html','suffix'=>null);
+    protected $stream = array();
 	function __construct()
 	{
 		$this->configure();
 		$this->initial();
 	}
+	function initial(){}	// reserved for customization
 	function configure()
 	{
 		$confs = array('database', 'common', $this->request('_DOMAIN'));
@@ -45,37 +46,46 @@ Class Controller extends Core
 		}
 		$this->conf = $conf;
 	}
-	function initial(){}	// reserved for customization
 	function mapping()
 	{
+		$stream = array(
+			'model'=>null,
+			'method'=>'index',
+			'param'=>null,
+			'view'=>'index',
+			'data'=>null,
+			'suffix'=>null,
+			'format'=>'html'
+		);
         if ($entry=preg_replace(array("|^/+|","|/+$|"),array('',''), $this->request('_ENTRY'))) {
             $r = split('/', $entry);
-			$this->map['model'] = $this->map['model']?$this->map['model']:array_shift($r);
-            $this->map['method'] = count($r)?array_shift($r):'index';
-			$this->map['view'] = strtolower($this->map['model']).'/'.$this->map['method'];
-            if (count($r)) $this->map['param'] = $r;
+			$stream['model'] = array_shift($r);
+            $stream['method'] = count($r)?array_shift($r):'index';
+			$stream['view'] = strtolower($stream['model']).'/'.$stream['method'];
+            if (count($r)) $stream['param'] = $r;
         }
-		return $this->map;
+		$this->stream = array_merge($stream, $this->stream); // this->stream can be overrided in initial()
+		return $this->stream;
 	}
     function boot()
     {
 		$this->mapping();
-		if (!$this->map['model']) {
+		if (!$this->stream['model']) {
 			if (!$this->conf['model']) {
 				$this->output($this->load_view('welcome'));
 			}
-			$this->map['model'] = $this->conf['model'];
+			$this->stream['model'] = $this->conf['model'];
 		}
 		try {
-			$this->app = new $this->map['model']($this->conf);
-            $stream = $this->app->handler($this->map);
+			$this->app = new $this->stream['model']($this->conf);
+            $stream = $this->app->handler($this->stream);
             if ($content=$this->app->load_view($stream['view'], $stream['data'], $stram['suffix'])) {
                 $this->output($content, $stream['format']);
             } else {
                 $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY')),$stram['suffix']));
             }
 		} catch (Exception $e) {
-		    $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY')),$stram['suffix']));
+		    $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY')),$this->stream['suffix']));
 		}
     }
 }

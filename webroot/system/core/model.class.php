@@ -14,7 +14,7 @@
 
 class Model extends Core
 {
-	public $stream = null;
+	public $stream = array();
 	protected $dsn_name = null;
 	protected $tables = null;
 	function initial(){}	// reserved for customization
@@ -30,9 +30,9 @@ class Model extends Core
 		}
 		$this->initial();
 	}
-	function handler($map)
+	function handler($stream)
 	{
-		$this->stream = array_merge($map, (array)$this->stream);
+		$this->stream = array_merge($stream, $this->stream); // this->stream can be overrided in initial()
 		$base_dir = APP_DIR."/model/handler";
 		$class = strtolower($this->stream['model']);
 		$handler = "$base_dir/$class/{$this->stream['method']}.inc.php";
