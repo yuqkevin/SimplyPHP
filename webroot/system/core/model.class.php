@@ -24,7 +24,9 @@ class Model extends Core
 		$this->conf = $conf;
 		if ($this->dsn_name) {
 			$this->db = $this->load_db($this->conf['dsn'][$this->dsn_name]);
-			if ($this->db&&is_array($this->tables)) $this->db->tables($this->tables);
+			if ($this->db&&is_array($this->tables)) {
+				foreach ($this->tables as $name=>$def) $this->$name = $this->db->load_table($def);
+			}
 		}
 		$this->initial();
 	}

@@ -15,7 +15,7 @@ class Mysql extends Dao
 	{
 		if (!$dsn) $dsn = $this->dsn;
 		$this->conn = mysql_pconnect($dsn['hostname'], $dsn['username'], $dsn['password']) or $this->_err("failed to connect to database");
-		if ($dsn['dataase']) mysql_select_db($dsn['dataase']);
+		if ($dsn['database']) mysql_select_db($dsn['database']);
 		return $this->conn;
 	}
 
@@ -50,7 +50,8 @@ class Mysql extends Dao
     function fetchByRow($hd, $mod=null)
     {
         if ($mod==ASSOC) {
-            return array_change_key_case(mysql_fetch_assoc($pth), CASE_LOWER);
+			$row = mysql_fetch_assoc($hd);
+			return $row?array_change_key_case($row, CASE_LOWER):null;
         }
         return mysql_fetch_row($hd);
     }

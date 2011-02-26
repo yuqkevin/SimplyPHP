@@ -102,11 +102,9 @@ abstract class Dao
 		return count($lines)?$lines:null;
 	}
 	/** Instancing table objects **/
-	final function tables($tables)
+	final function load_table($table_def)
 	{
-		if (is_array($tables)) {
-			foreach ($tables as $name=>$def) $this->$name = new TableObject($def, $this);
-		}
+		return new TableObject($table_def, $this);
 	}
 	final function param2field($param, $type)
 	{
@@ -171,7 +169,7 @@ Class TableObject
 	function search($filter, $suffix=null, $fields='*')
 	{
 		$filter = $this->prefix($filter, 'on');
-		if ($lines=$this->db->table_serach($this->table['name'], $filter, $suffix, $fields)) {
+		if ($lines=$this->db->table_search($this->table['name'], $filter, $suffix, $fields)) {
 			if (@$this->table['prefix']) {
 				for ($i=0; $i<count($lines); $i++) $lines[$i] = $this->prefix($lines[$i],'off');
 			}
@@ -190,15 +188,16 @@ Class TableObject
 	{
 		return $id?$this->db->table_proc($this->table, $id, $param):null;
 	}
-	function prefix($hash, $onoff)
+	function prefix($in, $onoff)
 	{
 		$prefix = strtolower(@$this->table['prefix']);
-		if (!$prefix||!$hash) return $hash;
-		foreach ($hash as $key=>$val) {
+		if (!$prefix||!$in) return $in;
+		$hash = array();
+		foreach ($in as $key=>$val) {
 			if ($onoff==='on') {
 				$key = $prefix.'_'.$key;
 			} elseif ($onoff==='off'&&strpos($key, $prefix)!==false) {
-				$key = substr($key, strpos($key, $prefix)+2);
+				$key = substr($key, strlen($prefix)+1);
 			}
 			$hash[$key] = $val;
 		}
