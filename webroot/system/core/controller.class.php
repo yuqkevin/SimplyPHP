@@ -79,10 +79,10 @@ Class Controller extends Core
 		try {
 			$this->app = new $this->stream['model']($this->conf);
             $stream = $this->app->handler($this->stream);
-            if ($content=$this->app->load_view($stream['view'], $stream['data'], $stram['suffix'])) {
+            if ($content=$this->app->load_view($stream['view'], $stream['data'], $stream['suffix'])) {
                 $this->output($content, $stream['format']);
             } else {
-                $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY')),$stram['suffix']));
+                $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY')),$stream['suffix']));
             }
 		} catch (Exception $e) {
 		    $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY')),$this->stream['suffix']));
