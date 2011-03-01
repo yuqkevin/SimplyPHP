@@ -45,7 +45,6 @@ Class Core
     public function load_view($view_name, $bind=null, $ext=null)
     {
 		$temp_base = APP_DIR."/views";
-		if (ob_get_contents()) ob_flush();
 		return $this->load_template($temp_base, $view_name, $bind, $ext);
 	}
 	public function load_template($temp_base, $view_name, $bind=null, $ext=null)
@@ -109,7 +108,6 @@ Class Core
             'jpg'=>'image/jpeg'
         );
         $file_exts = array('excel'=>'xls','pdf'=>'pdf','csv'=>'csv');
-        ob_clean();
         header("Pragma: public");  //fix IE cache issue with PHP
         header("Expires: 0");   // no cache
         if ($format) {
@@ -127,6 +125,7 @@ Class Core
         } else {
             echo $data;
         }
+		if (ob_get_contents()) ob_flush();
         exit;
     }
 	public function template_ext()
