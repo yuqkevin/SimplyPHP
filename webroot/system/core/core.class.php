@@ -44,7 +44,7 @@ Class Core
 	}
     public function load_view($view_name, $bind=null, $ext=null)
     {
-		$temp_base = APP_DIR."/views";
+		$temp_base = APP_DIR."/view";
 		return $this->load_template($temp_base, $view_name, $bind, $ext);
 	}
 	public function load_template($temp_base, $view_name, $bind=null, $ext=null)
