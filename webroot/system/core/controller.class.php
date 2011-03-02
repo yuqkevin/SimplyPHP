@@ -53,6 +53,7 @@ Class Controller extends Core
 			'method'=>'index',
 			'param'=>null,
 			'view'=>'index',
+			'folder'=>APP_DIR."/model/handler",
 			'data'=>null,
 			'suffix'=>null,
 			'format'=>'html'
@@ -78,7 +79,7 @@ Class Controller extends Core
 		}
 		try {
 			$this->app = new $this->stream['model']($this->conf);
-            $stream = $this->app->handler($this->stream);
+            $stream = $this->app->run($this->stream);
             if ($content=$this->app->load_view($stream['view'], $stream['data'], $stream['suffix'])) {
                 $this->output($content, $stream['format']);
             } else {

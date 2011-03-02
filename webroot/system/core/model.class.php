@@ -14,9 +14,9 @@
 
 class Model extends Core
 {
+	public $dsn_name = null;
+	public $tables = null;
 	public $stream = array();
-	protected $dsn_name = null;
-	protected $tables = null;
 	function initial(){}	// reserved for customization
 	function load_module(){} // loading app inner module
 	function __construct($conf=null)
@@ -30,19 +30,25 @@ class Model extends Core
 		}
 		$this->initial();
 	}
+	function run($stream)
+	{
+		$stream = array_merge($stream, $this->stream); // this->stream can be overrided in initial()
+		if (!$this->handler($stream))  $this->load_module();
+		return $this->stream;
+	}
 	function handler($stream)
 	{
-		$this->stream = array_merge($stream, $this->stream); // this->stream can be overrided in initial()
-		$base_dir = APP_DIR."/model/handler";
+		$this->stream = $stream;
+		$folder = $this->stream['folder'];
 		$class = strtolower($this->stream['model']);
-		$handler = "$base_dir/$class/{$this->stream['method']}.inc.php";
-		if (!file_exists($handler)) $handler = "$base_dir/{$this->stream['method']}.inc.php";
+		$handler = "$folder/$class/{$this->stream['method']}.inc.php";
+		if (!file_exists($handler)) $handler = "$folder/{$this->stream['method']}.inc.php";
 		if (file_exists($handler)) {
 			include($handler);
 		} elseif (method_exists($this, $this->stream['method'])) {
 			call_user_func(array($this, $this->stream['method']), $this->stream['param']);
 		} else {
-			$this->load_module();
+			return null;
 		}
         return $this->stream;
 	}

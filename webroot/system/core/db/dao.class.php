@@ -101,6 +101,24 @@ abstract class Dao
 		while ($r=$this->fetchByROw($hd, ASSOC)) $lines[] = $r;
 		return count($lines)?$lines:null;
 	}
+	public function table_tree($table_def, $root, $deep=null, $fields='*', $level=1)
+	{
+		$table = $table_def['name'];
+		$field_id = $table_def['pkey'];
+		$field_parent = $table_def['parent'];
+		$field_weight = $table_def['weight'];
+		$query = "select $fields,$level as LEVEL from $table where $field_parent=$root order by $field_weight desc";
+		$hd = $this->sql_prepare($query);
+		$lines = array();
+		if ($deep) $deep--;
+		while ($node=$this->fetchByRow($hd, ASSOC)) {
+			$lines[] = $node;
+			if (!isset($deep)||$deep>0) {
+				$lines = array_merge($lines, $this->table_tree($table_def, $node[$field_id], $deep, $fields, $level+1));
+			}
+		}
+		return $lines;
+	}
 	/** Instancing table objects **/
 	final function load_table($table_def)
 	{
@@ -176,6 +194,16 @@ Class TableObject
 		}
 		return $lines;
 	}
+	function tree($root, $deep=null, $fields='*')
+	{
+		if (!(isset($this->table['parent'])&&isset($this->table['weight']))) return null;
+		if ($lines=$this->db->table_tree($this->table, $root, $deep, $fields)) {
+			if (@$this->table['prefix']) {
+				for ($i=0; $i<count($lines); $i++) $lines[$i] = $this->prefix($lines[$i],'off');
+			}
+		}
+		return $lines;
+	}
 	function create($param)
 	{
 		return is_array($param)&&count(array_keys($param))?$this->db->table_proc($this->table, 0, $param):null;
@@ -196,7 +224,7 @@ Class TableObject
 		foreach ($in as $key=>$val) {
 			if ($onoff==='on') {
 				$key = $prefix.'_'.$key;
-			} elseif ($onoff==='off'&&strpos($key, $prefix)!==false) {
+			} elseif ($onoff==='off'&&strpos($key, $prefix)===0) {
 				$key = substr($key, strlen($prefix)+1);
 			}
 			$hash[$key] = $val;
