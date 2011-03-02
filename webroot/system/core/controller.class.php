@@ -57,7 +57,7 @@ Class Controller extends Core
 			'suffix'=>null,
 			'format'=>'html'
 		);
-        if ($entry=preg_replace(array("|^/+|","|/+$|"),array('',''), $this->request('_ENTRY'))) {
+        if ($entry=preg_replace(array("|^/+|","|/+$|"),array('',''), $this->request('_URL'))) {
             $r = split('/', $entry);
 			$stream['model'] = array_shift($r);
             $stream['method'] = count($r)?array_shift($r):'index';
@@ -82,10 +82,10 @@ Class Controller extends Core
             if ($content=$this->app->load_view($stream['view'], $stream['data'], $stream['suffix'])) {
                 $this->output($content, $stream['format']);
             } else {
-                $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY')),$stream['suffix']));
+                $this->output($this->load_view('page_not_found',array('url'=>$this->request('_URL')),$stream['suffix']));
             }
 		} catch (Exception $e) {
-		    $this->output($this->load_view('page_not_found',array('url'=>'/'.$this->request('_ENTRY')),$this->stream['suffix']));
+		    $this->output($this->load_view('page_not_found',array('url'=>$this->request('_URL')),$this->stream['suffix']));
 		}
     }
 }

@@ -27,7 +27,7 @@ Class Core
 				if ($r[0]==='www') array_shift($r);
 				return join('.', $r);
 			} elseif ($name==='_URL') {
-				return isset($_GET['_ENTRY'])?$_GET['_ENTRY']:$_SERVER['PHP_SELF'];
+				return isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/';
 			}
 		}
 		return trim(@$_GET[$name]);
