@@ -53,7 +53,7 @@ Class Controller extends Core
 			'method'=>'index',
 			'param'=>null,
 			'view'=>'index',
-			'folder'=>APP_DIR."/model/handler",
+			'folder'=>APP_DIR."/model",
 			'data'=>null,
 			'suffix'=>null,
 			'format'=>'html'
