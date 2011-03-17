@@ -48,7 +48,12 @@ abstract class Dao
             return $this->fetchOneRow("select * from $table where $pk_filter", ASSOC);
         } elseif ($id && $param && !is_array($param)) {
             if ($param==='delete') {
-                return $this->updateDB("delete $table where $pk_filter");
+				if (strtolower($this->dsn['dbdriver'])=='mysql') {
+					$query = "delete from $table where $pk_filter";
+				} else {
+					"delete $table where $pk_filter";
+				}
+                return $this->updateDB($query);
             }
             return null;   // invalid param
         }
@@ -206,6 +211,7 @@ Class TableObject
 	}
 	function create($param)
 	{
+		$param = $this->prefix($param, 'on');
 		return is_array($param)&&count(array_keys($param))?$this->db->table_proc($this->table, 0, $param):null;
 	}
 	function delete($id)
@@ -214,6 +220,7 @@ Class TableObject
 	}
 	function update($id, $param)
 	{
+		$param = $this->prefix($param, 'on');
 		return $id?$this->db->table_proc($this->table, $id, $param):null;
 	}
 	function prefix($in, $onoff)
