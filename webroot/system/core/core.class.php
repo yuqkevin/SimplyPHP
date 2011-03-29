@@ -14,6 +14,7 @@
 
 Class Core
 {
+	const W3S_SEQ = 'w3s_sequence';
 	public function request($name, $method=null)
 	{
 		$method = strtolower($method);
@@ -21,7 +22,8 @@ Class Core
 			return $method=='get'?$_GET:$this->_postvars($_POST);
 		}
 		if ($method!='get') {
-			if ($val=$this->_postvars($_POST, $name)) return $val;
+			$val = $this->_postvars($_POST, $name);
+			if (isset($val)) return $val;
 			if ($name==='_DOMAIN') {
 				$r = preg_split("/\./", strtolower($_SERVER['HTTP_HOST']));
 				if ($r[0]==='www') array_shift($r);
@@ -159,4 +161,14 @@ Class Core
         fputs($fp,$log_info);
         fclose($fp);
     }
+    /** Unique number generator **/
+    protected function sequence($offset=0, $schema=null)
+    {
+		if (!$schema) $schema = self::W3S_SEQ;
+        if ($offset=='reset') return $this->mysession($schema, 1);
+        $seq = intval($this->mysession($schema)) + $offset;
+        if ($offset) $this->mysession($schema, $seq);
+        return $seq;
+    }
+
 }

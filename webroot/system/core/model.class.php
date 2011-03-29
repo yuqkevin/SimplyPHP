@@ -112,6 +112,21 @@ class Model extends Core
         }
         return $opt;
     }
+	function hash2str($hash)
+	{
+		$str = null;
+		if (!is_array($hash)) return null;
+		foreach ($hash as $key=>$val) $str .= "$key=\"$val\" ";
+		return trim($str);
+	}
+	function str2hash($str)
+	{
+		$hash = array();
+		if (preg_match_all("/([^=\"]+)=\"([^\"]+)\"/", $str, $match)) {
+			for ($i=0; $i<count($match[0]); $i++) $hash[trim($match[1][$i])] = trim($match[2][$i]);
+		}
+		return $hash;
+	}
 
     function sendmail($from, $to, $subject, $content, $param=array())
     {
