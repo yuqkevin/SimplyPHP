@@ -32,20 +32,10 @@ Class Controller extends Core
     protected $stream = array();
 	function __construct()
 	{
-		$this->configure();
+		$this->conf = $this->configure();
 		$this->initial();
 	}
 	function initial(){}	// reserved for customization
-	function configure()
-	{
-		$confs = array('database', 'common', $this->request('_DOMAIN'));
-		$conf_dir = APP_DIR."/conf";
-    	foreach ($confs as $conf_file) {
-			$file = "$conf_dir/$conf_file.php";
-			if (file_exists($file)) include($file);
-		}
-		$this->conf = $conf;
-	}
 	function mapping()
 	{
 		$stream = array(

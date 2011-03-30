@@ -14,6 +14,7 @@
 
 Class Core
 {
+	protected $w3s_zones = array('core'=>CORE_DIR,'application'=>APP_DIR);
 	const W3S_SEQ = 'w3s_sequence';
 	public function request($name, $method=null)
 	{
@@ -33,6 +34,16 @@ Class Core
 			}
 		}
 		return trim(@$_GET[$name]);
+	}
+	public function configure()
+	{
+		$confs = array('database', 'common', $this->request('_DOMAIN'));
+		$conf_dir = APP_DIR."/conf";
+    	foreach ($confs as $conf_file) {
+			$file = "$conf_dir/$conf_file.php";
+			if (file_exists($file)) include($file);
+		}
+		return $conf;
 	}
 	private function _postvars($post, $key=null)
 	{
@@ -161,6 +172,17 @@ Class Core
         fputs($fp,$log_info);
         fclose($fp);
     }
+	/** Global Data Storage **/
+	protected function global_store($name, $val=null)
+	{
+		$HOOK = 'W3S';
+		if (!isset($val)) return @$_GLOBAL[$HOOK][$name];
+		if (!$val&&isset($_GLOBAL[$HOOK][$name])) {
+			unset($_GLOBAL[$HOOK][$name]);
+		} else {
+			$_GLOBAL[$HOOK][$name] = $val;
+		}
+	}
     /** Unique number generator **/
     protected function sequence($offset=0, $schema=null)
     {
