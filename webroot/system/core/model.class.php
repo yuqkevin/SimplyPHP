@@ -24,19 +24,29 @@ class Model extends Core
 	{
 		$this->conf = $conf?$conf:$this->configure();
 		// loading libraries
+		$libraries = $this->global_store(self::TAG_LIBRARY);
+		$this->lib = (object) self::TAG_LIBRARY;
+		if (!isset($libraries['lib'])) $libraries['lib'] = array();
 		foreach ($this->w3s_zones as $zone=>$fold) {
 			if (is_array(@$this->conf[self::TAG_LIBRARY][$zone])) {
-				$libraries = $this->global_store(self::TAG_LIBRARY);
+				if (in_array(get_class($this),$this->conf[self::TAG_LIBRARY][$zone])) continue; // no hook support for library
 				foreach ($this->conf[self::TAG_LIBRARY][$zone] as $class) {
 					$lib = strtolower($class);
-					if (isset($libraries[$class])) {
+					if ($zone==='core'&&isset($libraries[$class])) {
 						$this->$lib = $libraries[$class];
+					} elseif ($zone!=='core'&&is_object(@$libraries['lib'][$class])) {
+						$this->lib->$lib = $libraries['lib'][$class];
 					} else {
 						$file = $fold."/".self::TAG_LIBRARY."/$lib.class.php";
 						if (file_exists($file)) {
 							include_once($file);
-							$this->$lib = new $class;
-							$libraries[$class] = $this->$lib;
+							if ($zone==='core') {
+								$this->$lib = new $class;
+								$libraries[$class] = $this->$lib;
+							} else {
+								$this->lib->$lib = new $class;
+								$libraries['lib'][$class] = $this->lib->$lib;
+							}
 							$this->global_store(self::TAG_LIBRARY, $libraries);
 						}
 					}
