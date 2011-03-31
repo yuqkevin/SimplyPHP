@@ -14,7 +14,7 @@
 
 class Html
 {
-	function hasharray_options($lines, $field_key, $field_val=null, $in=null)
+	public function hasharray_options($lines, $field_key, $field_val=null, $in=null)
 	{
 		$result = null;
 		foreach ($lines as $line) {
@@ -23,7 +23,7 @@ class Html
 		}
 		return $result;
 	}
-    function hash_options($status_list, $status = null)
+    public function hash_options($status_list, $status = null)
     {
         $result = null;
         foreach ($status_list as $val => $name) {
@@ -32,7 +32,7 @@ class Html
         }
         return $result; 
     }
-	function array_options($array, $in=null)
+	public function array_options($array, $in=null)
 	{
         $opt = null;
         foreach ($array as $item) {
@@ -40,4 +40,16 @@ class Html
         }
         return $opt;
     }
+	public function trigger($url, $param=array('href'=>null,'class'=>null,'name'=>'popup'))
+	{
+		$timestamp = time();
+		return <<<EOT
+<a id="trigger-$timestamp" href="$url" class="trigger hidden {$param['class']}" name="{$param['name']}"></a>
+<script type="text/javascript">
+	$(document).ready(function(){
+		$('#trigger-$timestamp').trigger('click');
+	});
+</script>
+EOT;
+	}
 }

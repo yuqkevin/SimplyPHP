@@ -29,7 +29,7 @@ class Model extends Core
 		if (!isset($libraries['lib'])) $libraries['lib'] = array();
 		foreach ($this->w3s_zones as $zone=>$fold) {
 			if (is_array(@$this->conf[self::TAG_LIBRARY][$zone])) {
-				if (in_array(get_class($this),$this->conf[self::TAG_LIBRARY][$zone])) continue; // no hook support for library
+        		if (in_array(get_class($this),$this->conf[self::TAG_LIBRARY][$zone])) continue; // no recursion hook
 				foreach ($this->conf[self::TAG_LIBRARY][$zone] as $class) {
 					$lib = strtolower($class);
 					if ($zone==='core'&&isset($libraries[$class])) {
@@ -73,9 +73,14 @@ class Model extends Core
 		$folder = $this->stream['folder'];
 		$class = strtolower($this->stream['model']);
 		$handler = "$folder/$class/{$this->stream['method']}.inc.php";
-		if (!file_exists($handler)) $handler = "$folder/{$this->stream['method']}.inc.php";
+		$temp = "$folder/$class/{$this->stream['method']}.tpl.php";
+		if (!(file_exists($handler)||file_exists($temp))) {
+			$handler = "$folder/{$this->stream['method']}.inc.php";
+			$temp = "$folder/{$this->stream['method']}.tpl.php";
+		}
 		if (file_exists($handler)) {
 			include($handler);
+		} elseif (file_exists($temp)) {
 		} elseif (method_exists($this, $this->stream['method'])) {
 			call_user_func(array($this, $this->stream['method']), $this->stream['param']);
 		} else {
@@ -92,7 +97,35 @@ class Model extends Core
 		}
 		return $dbdriver?$this->$name:null;
 	}
-
+	function load_library($class, $name, $zone='application')
+	{
+        $libraries = $this->global_store(self::TAG_LIBRARY);
+		if ($class==get_class($this)) return null; // no recursion hook
+		if ($zone=='application'&&!is_object($this->lib)) {
+        	$this->lib = (object) self::TAG_LIBRARY;
+        	if (!isset($libraries['lib'])) $libraries['lib'] = array();
+		}
+		$fold = $this->w3s_zones[$zone];
+        $lib = strtolower($class);
+        if ($zone==='core'&&isset($libraries[$class])) {
+            $this->$lib = $libraries[$class];
+        } elseif ($zone!=='core'&&is_object(@$libraries['lib'][$class])) {
+            $this->lib->$lib = $libraries['lib'][$class];
+        } else {
+            $file = $fold."/".self::TAG_LIBRARY."/$lib.class.php";
+            if (file_exists($file)) {
+                include_once($file);
+                if ($zone==='core') {
+                    $this->$lib = new $class;
+                    $libraries[$class] = $this->$lib;
+                } else {
+                    $this->lib->$lib = new $class;
+                    $libraries['lib'][$class] = $this->lib->$lib;
+                }
+                $this->global_store(self::TAG_LIBRARY, $libraries);
+            }
+        }
+	}
 	function logout()
 	{
 		$this->clear();
@@ -104,5 +137,38 @@ class Model extends Core
 		$this->mysession('clear');
 		unset($_COOKIE);
         return true;
+    }
+}
+class Library extends Model
+{
+    function __construct()
+    {
+        $this->conf = $this->configure();
+        // loading core libraries
+        $libraries = $this->global_store(Model::TAG_LIBRARY);
+		$zone = 'core';
+        if (is_array(@$this->conf[Model::TAG_LIBRARY][$zone])) {
+            if (in_array(get_class($this),$this->conf[Model::TAG_LIBRARY][$zone])) continue; // no recursion hook
+            foreach ($this->conf[Model::TAG_LIBRARY][$zone] as $class) {
+                $lib = strtolower($class);
+                if ($zone==='core'&&isset($libraries[$class])) {
+                    $this->$lib = $libraries[$class];
+                } else {
+                    $file = $this->w3s_zones[$zone]."/".Model::TAG_LIBRARY."/$lib.class.php";
+                    if (file_exists($file)) {
+                        include_once($file);
+                        $this->$lib = new $class;
+                        $libraries[$class] = $this->$lib;
+                        $this->global_store(Model::TAG_LIBRARY, $libraries);
+                    }
+                }
+            }
+		}
+        if ($this->dsn_name) {
+            $this->db = $this->load_db($this->conf['dsn'][$this->dsn_name]);
+            if ($this->db&&is_array($this->tables)) {
+                foreach ($this->tables as $name=>$def) $this->$name = $this->db->load_table($def);
+            }
+        }
     }
 }

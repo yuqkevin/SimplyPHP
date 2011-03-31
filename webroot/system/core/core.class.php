@@ -33,7 +33,7 @@ Class Core
 				return isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/';
 			}
 		}
-		return trim(@$_GET[$name]);
+		return isset($_GET[$name])?trim($_GET[$name]):null;
 	}
 	public function configure()
 	{
@@ -53,7 +53,7 @@ Class Core
 			if ($key&&$k!==$key) continue;
 			$post[$k] = is_array($v)?$this->_postvars($v):trim($magic?stripslashes($v):$v);
 		}
-		return $key?$post[$key]:$post;
+		return isset($key)?(isset($post[$key])?$post[$key]:null):$post;
 	}
     public function load_view($view_name, $bind=null, $ext=null)
     {
