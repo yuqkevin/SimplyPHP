@@ -19,37 +19,16 @@ class Model extends Core
 	public $stream = array();
 	const TAG_LIBRARY = 'library';
 	function initial(){}	// reserved for customization
-	function load_module(){} // loading app inner module
+	function swapping(){}
 	function __construct($conf=null)
 	{
 		$this->conf = $conf?$conf:$this->configure();
 		// loading libraries
-		$libraries = $this->global_store(self::TAG_LIBRARY);
-		$this->lib = (object) self::TAG_LIBRARY;
-		if (!isset($libraries['lib'])) $libraries['lib'] = array();
 		foreach ($this->w3s_zones as $zone=>$fold) {
 			if (is_array(@$this->conf[self::TAG_LIBRARY][$zone])) {
         		if (in_array(get_class($this),$this->conf[self::TAG_LIBRARY][$zone])) continue; // no recursion hook
 				foreach ($this->conf[self::TAG_LIBRARY][$zone] as $class) {
-					$lib = strtolower($class);
-					if ($zone==='core'&&isset($libraries[$class])) {
-						$this->$lib = $libraries[$class];
-					} elseif ($zone!=='core'&&is_object(@$libraries['lib'][$class])) {
-						$this->lib->$lib = $libraries['lib'][$class];
-					} else {
-						$file = $fold."/".self::TAG_LIBRARY."/$lib.class.php";
-						if (file_exists($file)) {
-							include_once($file);
-							if ($zone==='core') {
-								$this->$lib = new $class;
-								$libraries[$class] = $this->$lib;
-							} else {
-								$this->lib->$lib = new $class;
-								$libraries['lib'][$class] = $this->lib->$lib;
-							}
-							$this->global_store(self::TAG_LIBRARY, $libraries);
-						}
-					}
+					$this->load_library($class, $zone);
 				}
 			}
 		}
@@ -64,7 +43,7 @@ class Model extends Core
 	function run($stream)
 	{
 		$stream = array_merge($stream, $this->stream); // this->stream can be overrided in initial()
-		if (!$this->handler($stream))  $this->load_module();
+		if (!$this->handler($stream)) $this->swapping();
 		return $this->stream;
 	}
 	function handler($stream)
@@ -97,30 +76,30 @@ class Model extends Core
 		}
 		return $dbdriver?$this->$name:null;
 	}
-	function load_library($class, $name, $zone='application')
+	function load_library($class, $zone='application', $name=null)
 	{
+        if (!$name) $name = strtolower($class);
         $libraries = $this->global_store(self::TAG_LIBRARY);
 		if ($class==get_class($this)) return null; // no recursion hook
-		if ($zone=='application'&&!is_object($this->lib)) {
+		if ($zone=='application'&&(!isset($this->lib)||!is_object($this->lib))) {
         	$this->lib = (object) self::TAG_LIBRARY;
         	if (!isset($libraries['lib'])) $libraries['lib'] = array();
 		}
 		$fold = $this->w3s_zones[$zone];
-        $lib = strtolower($class);
         if ($zone==='core'&&isset($libraries[$class])) {
-            $this->$lib = $libraries[$class];
+            $this->$name = $libraries[$class];
         } elseif ($zone!=='core'&&is_object(@$libraries['lib'][$class])) {
-            $this->lib->$lib = $libraries['lib'][$class];
+            $this->lib->$name = $libraries['lib'][$class];
         } else {
-            $file = $fold."/".self::TAG_LIBRARY."/$lib.class.php";
+            $file = $fold."/".self::TAG_LIBRARY."/".strtolower($class).".class.php";
             if (file_exists($file)) {
                 include_once($file);
                 if ($zone==='core') {
-                    $this->$lib = new $class;
-                    $libraries[$class] = $this->$lib;
+                    $this->$name = new $class;
+                    $libraries[$class] = $this->$name;
                 } else {
-                    $this->lib->$lib = new $class;
-                    $libraries['lib'][$class] = $this->lib->$lib;
+                    $this->lib->$name = new $class;
+                    $libraries['lib'][$class] = $this->lib->$name;
                 }
                 $this->global_store(self::TAG_LIBRARY, $libraries);
             }
@@ -139,6 +118,24 @@ class Model extends Core
         return true;
     }
 }
+class Swap extends Model
+{
+	function boot(){}
+	function swapping()
+	{
+		$class = strtolower(get_class($this));
+		$this->stream['folder'] = APP_DIR."/model/$class";
+		$this->stream['model'] = $this->stream['method'];
+		$this->stream['method'] = count($this->stream['param'])?array_shift($this->stream['param']):'index';
+		if (!$page=$this->stream['model']!==$this::COMPONENT_PREFIX) {
+         	if (!is_array($this->stream['param'])||count($this->stream['param'])<1) return null; // missing component name
+			$this->stream['model'] = $this->stream['method'];
+			$this->stream['method'] = array_shift($this->stream['param']);
+		}
+		$this->boot($page);
+	}
+}
+
 class Library extends Model
 {
     function __construct()

@@ -25,7 +25,7 @@ function __autoload($class)
 	throw new Exception("Unable to load $class.");
     return false;
 }
-
+require_once(CORE_DIR."/model.class.php");
 Class Controller extends Core
 {
 	protected $conf = null;
@@ -39,7 +39,8 @@ Class Controller extends Core
 	function mapping()
 	{
 		$stream = array(
-			'model'=>null,
+			'offset'=>null,
+			'model'=>$this->conf['model']['default'],
 			'method'=>'index',
 			'param'=>null,
 			'view'=>'index',
@@ -48,13 +49,21 @@ Class Controller extends Core
 			'suffix'=>null,
 			'format'=>'html'
 		);
-        if ($entry=preg_replace(array("|^/+|","|/+$|"),array('',''), $this->request('_URL'))) {
-            $r = split('/', $entry);
-			$stream['model'] = array_shift($r);
-            $stream['method'] = count($r)?array_shift($r):'index';
-			$stream['view'] = strtolower($stream['model']).'/'.$stream['method'];
-            if (count($r)) $stream['param'] = $r;
-        }
+		$url = $this->request('_URL');
+		foreach ($this->conf['model'] as $offset=>$model) {
+			if ($offset==$url||strpos($url, $offset.'/')===0) {
+				$stream['offset'] = $offset;
+				$stream['model'] = $model;
+				$req = substr($url, strlen($offset));
+				if (strlen($req)>1) {
+					$r = split('/', substr($req,1));
+					$stream['method'] = array_shift($r);
+					$stream['param'] = $r;
+				}
+				break;
+			}
+		}
+		$stream['view'] = strtolower($stream['model']).'/'.$stream['method'];
 		$this->stream = array_merge($stream, $this->stream); // this->stream can be overrided in initial()
 		return $this->stream;
 	}
@@ -62,10 +71,7 @@ Class Controller extends Core
     {
 		$this->mapping();
 		if (!$this->stream['model']) {
-			if (!$this->conf['model']) {
-				$this->output($this->load_view('welcome'));
-			}
-			$this->stream['model'] = $this->conf['model'];
+			$this->output($this->load_view('welcome'));
 		}
 		try {
 			$this->app = new $this->stream['model']($this->conf);
