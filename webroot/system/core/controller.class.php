@@ -60,10 +60,11 @@ Class Controller extends Core
 					$stream['method'] = array_shift($r);
 					$stream['param'] = $r;
 				}
+				$stream['folder'] .= '/'.strtolower($stream['model']);
 				break;
 			}
 		}
-		$stream['view'] = strtolower($stream['model']).'/'.$stream['method'];
+		$stream['view'] = $stream['folder'].'/'.$stream['method'];
 		$this->stream = array_merge($stream, $this->stream); // this->stream can be overrided in initial()
 		return $this->stream;
 	}

@@ -79,8 +79,8 @@ class Mysql extends Dao
     }
 	function _err($err_msg=null)
 	{
-		$err_msg .= '<br />[#'.mysql_errno().']'.(DEBUG?htmlentities(mysql_error()):
-			"Sorry, an internal error causes abortion of process.");
+		if (DEBUG) debug_print_backtrace();
+		$err_msg .= "<br>\nSorry, an internal error causes abortion of process.";
 		trigger_error($err_msg, E_USER_ERROR);
 	}
 }

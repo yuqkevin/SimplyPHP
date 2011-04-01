@@ -51,17 +51,14 @@ class Model extends Core
 		$this->stream = $stream;
 		$folder = $this->stream['folder'];
 		$class = strtolower($this->stream['model']);
-		$handler = "$folder/$class/{$this->stream['method']}.inc.php";
-		$temp = "$folder/$class/{$this->stream['method']}.tpl.php";
-		if (!(file_exists($handler)||file_exists($temp))) {
-			$handler = "$folder/{$this->stream['method']}.inc.php";
-			$temp = "$folder/{$this->stream['method']}.tpl.php";
-		}
+		$handler = "$folder/handler/{$this->stream['method']}.inc.php";
+		$temp = "$folder/handler/{$this->stream['method']}.tpl.php";
+		$prefix = 'handler_';
 		if (file_exists($handler)) {
 			include($handler);
 		} elseif (file_exists($temp)) {
-		} elseif (method_exists($this, $this->stream['method'])) {
-			call_user_func(array($this, $this->stream['method']), $this->stream['param']);
+		} elseif (method_exists($this, $prefix.$this->stream['method'])) {
+			call_user_func(array($this, $prefix.$this->stream['method']), $this->stream['param']);
 		} else {
 			return null;
 		}
@@ -123,10 +120,11 @@ class Swap extends Model
 	function boot(){}
 	function swapping()
 	{
-		$class = strtolower(get_class($this));
-		$this->stream['folder'] = APP_DIR."/model/$class";
+		//$class = strtolower(get_class($this));
+		//$this->stream['folder'] .= APP_DIR."/model/$class";
 		$this->stream['model'] = $this->stream['method'];
 		$this->stream['method'] = count($this->stream['param'])?array_shift($this->stream['param']):'index';
+		$this->stream['folder'] .= '/'.$this->stream['model'];
 		if (!$page=$this->stream['model']!==$this::COMPONENT_PREFIX) {
          	if (!is_array($this->stream['param'])||count($this->stream['param'])<1) return null; // missing component name
 			$this->stream['model'] = $this->stream['method'];
