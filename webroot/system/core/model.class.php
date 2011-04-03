@@ -56,6 +56,8 @@ class Model extends Core
 		$class = strtolower($this->stream['model']);
 		$handler = "$folder/$prefix/{$this->stream['method']}.inc.php";
 		$temp = "$folder/$prefix/{$this->stream['method']}.tpl.php";
+		$this->stream['comp_url'] = $stream['offset']."/component/$class/{$this->stream['method']}";
+		$this->stream['url'] = $this->request('_URL');
 		if (file_exists($handler)) {
 			include($handler);
 		} elseif (file_exists($temp)) {
