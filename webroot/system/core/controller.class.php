@@ -43,7 +43,7 @@ Class Controller extends Core
 			'model'=>$this->conf['model']['default'],
 			'method'=>'index',
 			'param'=>null,
-			'view'=>'index',
+			'view'=>null,
 			'folder'=>APP_DIR."/model",
 			'data'=>null,
 			'suffix'=>null,
@@ -51,16 +51,14 @@ Class Controller extends Core
 		);
 		$url = $this->request('_URL');
 		foreach ($this->conf['model'] as $offset=>$model) {
-			if ($offset==$url||strpos($url, $offset.'/')===0) {
+			if (preg_match("|^$offset/?(.*)|i", $url, $p)) {
 				$stream['offset'] = $offset;
 				$stream['model'] = $model;
-				$req = substr($url, strlen($offset));
-				if (strlen($req)>1) {
-					$r = split('/', substr($req,1));
-					$stream['method'] = array_shift($r);
-					$stream['param'] = $r;
+				if ($p[1]) {
+					$stream['param'] = preg_split("|/|", $p[1]);
+					$stream['method'] = array_shift($stream['param']);
 				}
-				$stream['folder'] .= '/'.strtolower($stream['model']);
+				$stream['folder'] .= '/'.strtolower($model);
 				break;
 			}
 		}

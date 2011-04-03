@@ -86,9 +86,9 @@ Class Core
         ob_end_clean();
         return $content;
     }
-	public function location($url)
+	public function redirect($url, $code=307)
 	{
-		header("location:$url");
+		header("location:$url", TRUE, $code);
 		exit;
 	}
     public function file_download($filename, $body)
