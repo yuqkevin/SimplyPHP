@@ -192,5 +192,11 @@ Class Core
         if ($offset) $this->mysession($schema, $seq);
         return $seq;
     }
-
+	/** Set Stream to json format for ajax request **/
+	protected function ajax()
+	{
+	    $this->stream['view'] = null;
+    	$this->stream['format'] = 'json';
+	    $this->stream['data'] = array('success'=>false,'meesage'=>null);
+	}
 }
