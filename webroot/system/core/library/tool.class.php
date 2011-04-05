@@ -42,5 +42,21 @@ class Tool
 		}
 		return $hash;
 	}
+	function dir_scan($dir, $pattern='*', $deep=null, $level=0)
+	{
+		$files = array();
+		$files[] = array('name'=>$dir,'level'=>$level,'type'=>'folder');
+		$level++;
+		foreach (glob($dir."/$pattern") as $file) {
+			if (is_dir($file)) {
+				if (!isset($deep)||$deep>$level) {
+					$files = array_merge($files, self::dir_scan($file, $pattern, $deep, $level));
+				}
+			} else {
+				$files[] = array('name'=>$file,'level'=>$level,'type'=>'file');
+			}
+		}
+		return $files;
+	}
 }
 

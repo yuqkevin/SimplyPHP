@@ -112,6 +112,7 @@ Class Core
     {
         $types = array(
             'html'=>'text/html',
+			'plain'=>'text/plain',
             'css'=>'text/css',
             'js'=>'text/javascript',
             'xml'=>'text/xml',
@@ -140,6 +141,63 @@ Class Core
         }
 		if (ob_get_contents()) ob_flush();
         exit;
+    }
+    /** Upload file with specific type
+     * @input
+     *  userfile    $__FILES entry
+     *  target      target file path, or folder if multiple upload
+     *  callback    call back function invoked for each valid upload file
+     *  ext_inherintance use uploaded file's extension
+     * @return
+     *  String/Array    target file name or callback return
+     *  false       invalid upload, maybe an attack
+     *  null        valid upload but failed for move or user callback
+    **/
+    public function upload_file($userfile, $target=null, $callback=null, $ext_inherintance=true)
+    {
+        if (is_array($_FILES[$userfile]["error"])) {
+            // batch upload
+            $results = array();
+            foreach ($_FILES[$userfile]["error"] as $key => $error) {
+                $result = false;
+                if (!$name=$_FILES[$userfile]["name"][$key]) continue;
+                if ($error==UPLOAD_ERR_OK) {
+                    $tmp_name = $_FILES[$userfile]["tmp_name"][$key];
+                    $itarget = $target.'/'.$name;
+                    if ($callback && $res=call_user_func($callback, $tmp_name, $itarget)) {
+                        $name = basename($res);
+                        $result = true;
+                    } elseif (!$callback) {
+                        if (move_uploaded_file($tmp_name, $itarget)) {
+                            $result = true;
+                        }
+                    }
+                }
+                $results[$name] = $result;
+            }
+            return $results;
+        }
+        if (!is_uploaded_file($_FILES[$userfile]['tmp_name'])) {
+            // error
+            return false;
+        }
+        $tmp_name = $_FILES[$userfile]['tmp_name'];
+        if (is_dir($target)) {
+            $target .= '/'.$_FILES[$userfile]['name'];
+        } else {
+            // check extension
+            $r1 = split('\.', $target);
+            $r2 = split('\.', $_FILES[$userfile]['name']);
+            if ($ext_inherintance && strtolower(end($r1))!=strtolower(end($r2))) {
+                $target .= '.'.strtolower(end($r2));
+            }
+        }
+        if ($callback) {
+            return call_user_func($callback, $tmp_name, $target);
+        } elseif (!move_uploaded_file($tmp_name, $target)) {
+            return null;
+        }
+        return $target;
     }
 	public function template_ext()
 	{
@@ -197,6 +255,6 @@ Class Core
 	{
 	    $this->stream['view'] = null;
     	$this->stream['format'] = 'json';
-	    $this->stream['data'] = array('success'=>false,'meesage'=>null);
+	    $this->stream['data'] = array('success'=>false,'message'=>null);
 	}
 }
