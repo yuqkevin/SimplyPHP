@@ -58,5 +58,17 @@ class Tool
 		}
 		return $files;
 	}
+    function random($len, $type='mix')
+    {
+		$types = array('mix'=>'abcdefghijkmnopqrstuvwxyzABCDEFGHIJKLMNPQRSTUVWXYZ0123456789','num'=>'0123456789','alpha'=>'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+        $len = max(1, $len);
+        $txt = isset($types[$type])?$types[$type]:$types['mix'];
+        $l = strlen($txt);
+        $str = null;
+        for ($i = 0; $i < $len; $i ++) {
+            $str .= substr($txt, mt_rand(0, $l - 1),1);
+        }
+        return $str;
+    }
 }
 

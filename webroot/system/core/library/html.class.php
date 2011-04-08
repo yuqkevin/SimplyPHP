@@ -52,4 +52,17 @@ class Html
 </script>
 EOT;
 	}
+	public function panel_header($html)
+	{
+		return '<h1 class="panel-header">'.$html.'</h1>';
+	}
+	public function panel_footer($form,$buttons)
+	{
+		return <<<EOT
+<h1 class="panel-footer"><span>
+<a href="#" class="trigger" name="close">{$buttons['close']}</a>
+<a href="#" class="trigger" name="post" target="$form">{$buttons['submit']}</a>
+</span></h1>
+EOT;
+	}
 }

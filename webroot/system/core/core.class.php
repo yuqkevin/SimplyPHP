@@ -214,6 +214,17 @@ Class Core
         if (!isset($val)) return @$_SESSION[$name];
         return $_SESSION[$name] = $val;
     }
+    public function myglobal($name, $val=null)
+    {
+		$ENTRY = 'W3S_GLOBAL';
+        if ($name=='clear') {
+            $_GLOBAL[$ENTRY] = array();
+            return true;
+        }
+		if (!isset($_GLOBAL[$ENTRY])) $_GLOBAL[$ENTRY] = array();
+        if (!isset($val)) return @$_GLOBAL[$ENTRY][$name];
+        return $_GLOBAL[$ENTRY][$name] = $val;
+    }
     public function logging($info, $log_file=null)
     {
         if (!$log_file) $log_file = APP_DIR. '/logs/'.strtolower(get_class($this)).'.log';

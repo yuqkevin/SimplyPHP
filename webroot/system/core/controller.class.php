@@ -81,6 +81,7 @@ Class Controller extends Core
                 $this->output($this->load_view('page_not_found',array('url'=>$this->request('_URL')),$stream['suffix']));
             }
 		} catch (Exception $e) {
+			if (DEBUG) print_r($e);
 		    $this->output($this->load_view('page_not_found',array('url'=>$this->request('_URL')),$this->stream['suffix']));
 		}
     }
