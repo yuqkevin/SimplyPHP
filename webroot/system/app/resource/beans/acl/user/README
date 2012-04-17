@@ -1,0 +1,30 @@
+User Identification Authorization Bean. Sub-class of Acl Bean
+User
+. properties (in acl_session)
+  . id
+  . login
+  . domain
+  . category
+  . group
+  . firstname
+  . lastname
+  . email
+  . comments
+  . create
+  . timestamp
+  . data
+. methods
+  . sign_in
+  . sign_out
+  . register
+  . modify
+  . disable
+  . remove
+  . list
+  . session_verify
+Group
+. methods
+ . create
+ . modify
+ . remove
+ . list

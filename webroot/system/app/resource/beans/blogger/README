@@ -1,0 +1,7 @@
+Blog Bean: blog writing/edit/delete/listing/read and relevant operations
+blog writing
+ . editor
+ . actions:create/update/delete
+blog listing
+blog reading
+tag listing

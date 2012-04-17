@@ -1,0 +1,48 @@
+Access Control Bean
+  . Control Pixel & User
+    . Domain	Resource applicable scope (restricted to be used in domain) 
+      . Top scope of access control. 
+      . All users we're dealing with here should be under specific domain. e.g ws-dev.w3softwares.com
+    . DNA		Resource's ownership (owner/maintainer)
+      . System	DNA=1, Top Level Group, Site develop/maintain/management.
+      . Client	DNA=nnn, Restriction of content
+    . Group		Access Control on Menu/Link
+      . Types
+        . System 	DNA=1
+        . Client	DNA=nnn
+      . Attributes
+        . Owner	primary account whose dna used as group's dna
+        . User	account who can only access link defined the group
+        . link	accessible url in group
+    . Account
+      . system account		DNA=1
+      . Primary account		ID=DNA, created by system account
+      . Regular account		created by primary account or other regular account
+        . DNA ..... primary account DNA
+        . Group	... 0 which means no access, or group which has primary account's dna
+
+  . Web Resource
+    . Model		configure, only models in configure files can be accessible.
+    . Component (Non-open access component)
+      . DNA Verification ........... session/dna level control
+        . System DNA ..... OK
+        . Client DNA ..... acl->component(component, dna) Component Acl implemented at head of method
+          . table acl_component:
+            . Definition
+              . component (model::method)  moethod is optional, apply for whole model if method omitted.
+              . default permision	allow/deny/session
+              . exeptional dnaset   serialize(array(dna1,dna2,...))
+            . Query
+              . select permission from acl_component where component='...'
+              . returns OK if not found (open component), or
+              . returns OK if permission='allow' and dna not in dnaset, or
+              . returns OK if permission='deny' and dna in dnaset, or
+              . returns OK if permission='session' and dna is valid, or
+              . returns Failure
+      . Context Verification ..... Keep calling follow the context. Avoide directly http(s) call on restricted component.
+        . Inner call is always allowed
+        . Call via http(s) will be verified by access token: _token
+        . token verification is alway located at head of method include file.
+
+    . Content
+      . DNA Verification	Only content belongs to user who has same dna.

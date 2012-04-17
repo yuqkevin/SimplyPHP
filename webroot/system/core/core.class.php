@@ -6,75 +6,564 @@
 // -------------------------------------------------------------------------------+
 // | Repository: https://github.com/yuqkevin/SimplyPHP/                           |
 // +------------------------------------------------------------------------------+
-// | Author:  Kevin Q. Yu                                                         |
+// | Author:  Kevin Q. Yu <kevin@w3softwares.com>                                 |
 // -------------------------------------------------------------------------------+
 // | Checkout: 2011.01.19                                                         |
 // -------------------------------------------------------------------------------+
 //
-
 Class Core
 {
-	protected $w3s_zones = array('core'=>CORE_DIR,'application'=>APP_DIR);
+	protected $conf = null;
+	protected $dependencies = null;  // array(LibClassName=>name)  invoke: this->lib->name
+	const HOOK_LIB = 'library';
+	const HOOK_DB = 'database';
+	const HOOK_ENV = 'w3s_env';
+	const DEFAULT_ENTRY = 'main';
 	const W3S_SEQ = 'w3s_sequence';
+	const REQUEST_CACHE = 'w3s_request';	// for input cache
+
+	/*** Env variable which can not be re-set in the same session ***/
+	public function env($name, $val=null)
+	{
+		$name = strtoupper($name);
+		if ($name==='DOMAIN') {
+			$r = preg_split("/\./", strtolower($_SERVER['HTTP_HOST']));
+			if ($r[0]==='www') array_shift($r);
+			return join('.', $r);
+		} elseif ($name==='URL') {
+			return $this->request('_URL');
+		} elseif ($name==='PATH') {
+			return $this->request('_PATH');
+		} elseif (isset($_SERVER[$name])) {
+			return $_SERVER[$name];
+		}
+		// Customized env variable in session
+        if (!session_id()) session_start();
+        $HOOK = self::HOOK_ENV;
+		if (!isset($val)) return @$_SESSION[$HOOK][$name];
+		if (!$val) {
+			if (isset($_SESSION[$HOOK][$name])) unset($_SESSION[$HOOK][$name]);
+		} else {
+			$_SESSION[$HOOK][$name] = $val;
+		}
+		return $_SESSION[$HOOK][$name] = $val;
+	}
+
+	/*** mix request(string $name[, string $method])
+	 *	@description	get request parameters. method: get,post,cache. post>get if non method given. post>get>session if method is 'cache'
+	***/
 	public function request($name, $method=null)
 	{
 		$method = strtolower($method);
-		if ($method&&!$name) {
-			return $method=='get'?$_GET:$this->_postvars($_POST);
+		#if ($method&&!$name) {
+		#	return $method=='get'?$_GET:self::_postvars($_POST);
+		#}
+		if ($name==='_POST') {
+			return self::_postvars($_POST);
+		} elseif ($name==='_GET') {
+			if (isset($_GET['_ENTRY'])) unset($_GET['_ENTRY']);
+			return $_GET;
+		} elseif ($name==='_CACHE') {
+			return $this->session(self::REQUEST_CACHE);
+		} elseif ($name==='_DOMAIN') {
+            $r = preg_split("/\./", strtolower($_SERVER['HTTP_HOST']));
+            if ($r[0]==='www') array_shift($r);
+            return join('.', $r);
+		} elseif ($name==='_URL') {
+                return (@$_SERVER['HTTPS']?'https':'http').'://'.$_SERVER['HTTP_HOST'].(isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/');
+        } elseif ($name==='_PATH') {
+                return isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/';
 		}
-		if ($method!='get') {
-			$val = $this->_postvars($_POST, $name);
-			if (isset($val)) return $val;
-			if ($name==='_DOMAIN') {
-				$r = preg_split("/\./", strtolower($_SERVER['HTTP_HOST']));
-				if ($r[0]==='www') array_shift($r);
-				return join('.', $r);
-			} elseif ($name==='_URL') {
-				return isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/';
+		$default_val = null;
+		if ($method=='cache') {
+			$request = $this->session(self::REQUEST_CACHE);
+			$default_val = @$request[$name];
+		}
+		if ($method=='get') return trim(@$_GET[$name]);
+		if ($method=='post') return self::_postvars($_POST, $name);
+		$val = isset($_POST[$name])?self::_postvars($_POST, $name):(isset($_GET[$name])?trim($_GET[$name]):$default_val);
+		if ($method=='cache') {
+			$request[$name] = $val;
+			$this->session(self::REQUEST_CACHE, $request);
+		}
+		return $val;
+	}
+	/*** mix request_cache(string $name, mix $val) **
+	 *	@description	setter for request cache
+	 *	@input	string $name	param name
+	 *			mix $val		'': clear param, otherwise value of param
+	 *	@return mix	$val
+	***/
+	protected function request_cache($name, $val)
+	{
+		$request = $this->session(self::REQUEST_CACHE);
+		if (isset($val)&&!$val) {
+			if ($name) {
+				unset($request[$name]);
+			} else {
+				$request = '';	// clear whole request parameters
+			}
+			return $this->session(self::REQUEST_CACHE, $request);
+		}
+		$request[$name] = $val;
+		$this->session(self::REQUEST_CACHE, $request);
+		return $val;
+	}
+	/** Loading libraries given in array
+	 * @input array $dependencies	array(LibClassName=>HookZone,...)
+	 * return void	library will be hooked
+	**/
+	public function load_dependencies($dependencies)
+	{
+		foreach ((array)$dependencies as $class => $name) {
+			self::load_lib($class, $name);
+		}
+	}
+	/** load library
+	 * @input string $class_name	Must in camel string
+	 *		  string $name(optional) $this->lib->name, name=class_name if name is not given
+	 *		  bool	 $force(optional) true: override old hook if it exists. false:give error if hook already occupied
+	**/
+	public function load_lib($class_name, $name=null, $force=false)
+	{
+		if (!$name) $name = substr($class_name, 3); //remove 'lib' header
+		$libraries = $this->global_store(self::HOOK_LIB);
+		$lib = null;
+		if (isset($libraries[$class_name])) {
+			$lib = $libraries[$class_name];
+		} else {
+			$lib = new $class_name($this->conf);
+			if (@$lib->status['error_code']) {
+				$this->error('Error Code:'.$lib->status['error_code'].' '.@$lib->status['error']);
+			}
+			if ($this->operator&&method_exists($lib, 'operator')) $lib->operator($this->operator);
+			$libraries[$class_name] = $lib;
+			$this->global_store(self::HOOK_LIB, $libraries);
+		}
+		if (!isset($this->lib)) $this->lib = new stdClass();
+		if ($force||!isset($this->lib->$name)) {
+			$this->lib->$name = $lib;
+		} else {
+			$this->error("Error! The library hook $name has been occupied already.");
+		}
+		return $lib;
+	}
+	/*** generate component url without offset **/
+	public function component_url($model_name, $method, $ajax=true)
+	{
+		if (isset($this->conf['model'][$model_name])&&$this->conf['model'][$model_name]!=='default') {
+			$url = $this->conf['model'][$model_name];
+		} else {
+			$url = '/'.$model_name;
+		}
+		if ($ajax) $url .= ($url=='/'?null:'/').$this->conf['global']['ajax_prefix'];
+		return $url.'/'.$method;
+	}
+	/** keep class name in format. e.g. uiHtml -> UiHtml **/
+	public function class_name_format($str, $prefix=null)
+	{
+        $path = preg_split("/\//", strtolower(preg_replace("/([a-z0-9])([A-Z])/", "\\1/\\2", $str)));
+        if (isset($prefix) && $path[0]!==$prefix) array_unshift($path, $prefix);
+        return str_replace(' ','', ucwords(join(' ', $path)));
+	}
+    public function date_format($in, $format=null)
+    {
+        if (!$in) return null;
+		if (!$format) $format = defined(get_class($this).'::DATE_FORMAT')?constant(get_class($this).'::DATE_FORMAT'):'Y-m-d';
+        return date($format, strtotime($in));
+    }
+    public function time_format($str, $format='H:i:s')
+    {
+        $src = array('H','i','s','h','a');
+        if (preg_match("/(\d+):(\d+):(\d+)/", $str, $p)) {
+            $hour = sprintf("%02d", $p[1]);
+            $min = sprintf("%02d", $p[2]);
+            $sec = sprintf("%02d", $p[3]);
+        } elseif (preg_match("/(\d+):(\d+)/", $str, $p)) {
+            $hour = sprintf("%02d", $p[1]);
+            $min = sprintf("%02d", $p[2]);
+            $sec = '00';
+        } elseif (preg_match("/(\d+)/", $str, $p)) {
+            $hour = sprintf("%02d", $p[1]);
+            $min = $sec = '00';
+        } else {
+            return null;
+        }
+        if ($hour<12 && preg_match("/pm/i", $str)) {
+            $hour = sprintf("%02d", ($hour+12)%24);
+        }
+        $data = array($hour, $min, $sec, $hour>12?($hour%12):$hour, $hour>=12?'pm':'am');
+        return str_replace($src, $data, $format);
+    }
+	public function record($cmd, $zone='debug')
+	{
+		if ($cmd) {
+        	ob_start();
+			return;
+		}
+        $content = ob_get_contents();
+        ob_end_clean();
+		self::logging($content, $zone);
+		return;
+	}
+	public function logging($message, $zone='debug')
+	{
+		$log_file = APP_DIR."/logs/$zone.log";
+		$fp = fopen($log_file, 'a') or $this->error(basename($log_file));
+		fwrite($fp, sprintf("%s\t%s\n", date('Y-m-d H:i:s'), $message));
+		fclose($fp);
+		return;
+	}
+	public function error($message='Internal Error.') {
+        if ($this->conf['global']['DEBUG']) debug_print_backtrace();
+		exit($message);
+	}
+	/** unserialize given string if it is unserialized**/
+	public function unserialize($str)
+	{
+		$data = @unserialize($str);
+		return ($data===false&&$str!=='b:0;')?$str:$data;
+	}
+	// session within class zone
+    public function session($name, $val=null)
+    {
+        if (!session_id()) session_start();
+		if ($name==='id') return session_id();
+        if ($name=='clear') {
+            $_SESSION = array();
+            session_destroy();
+            return true;
+        }
+		if (!isset($val)) return @$_SESSION[$name];
+		if ($val=='reset') $val='';
+		return $_SESSION[$name]=$val;
+    }
+    /** Unique number generator **/
+    public function sequence($offset=0, $schema=null)
+    {
+		if (!$schema) $schema = self::W3S_SEQ;
+        if ($offset=='reset') return self::session($schema, 1);
+        $seq = intval(self::session($schema)) + $offset;
+        if ($offset) self::session($schema, $seq);
+        return $seq;
+    }
+    public function hasharray2array($lines, $fkey, $fval=null)
+    {
+        $array = array();
+        foreach ((array)$lines as $line) {
+            if (isset($fval)) {
+                $array[$line[$fkey]] = $line[$fval];
+            } else {
+                $array[] = $line[$fkey];
+            }
+        }
+        return $array;
+    }
+
+	public function hash2str($hash)
+	{
+		$str = null;
+		if (!is_array($hash)) return null;
+		foreach ($hash as $key=>$val) $str .= "$key=\"$val\" ";
+		return trim($str);
+	}
+	public function str2hash($str)
+	{
+		$hash = array();
+		if (preg_match_all("/([^=\"]+)=\"([^\"]+)\"/", $str, $match)) {
+			for ($i=0; $i<count($match[0]); $i++) $hash[trim($match[1][$i])] = trim($match[2][$i]);
+		}
+		return $hash;
+	}
+	public function dir_scan($dir, $pattern='*', $deep=null, $level=0)
+	{
+		$files = array();
+		$files[] = array('name'=>$dir,'level'=>$level,'type'=>'folder');
+		$level++;
+		foreach (glob($dir."/$pattern") as $file) {
+			if (is_dir($file)) {
+				if (!isset($deep)||$deep>$level) {
+					$files = array_merge($files, self::dir_scan($file, $pattern, $deep, $level));
+				}
+			} else {
+				$files[] = array('name'=>$file,'level'=>$level,'type'=>'file');
 			}
 		}
-		return isset($_GET[$name])?trim($_GET[$name]):null;
+		return $files;
 	}
-	public function configure()
+    public function random($len, $type='mix')
+    {
+		$types = array('mix'=>'abcdefghijkmnopqrstuvwxyzABCDEFGHIJKLMNPQRSTUVWXYZ0123456789','num'=>'0123456789','alpha'=>'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+        $len = max(1, $len);
+        $txt = isset($types[$type])?$types[$type]:$type;
+        $l = strlen($txt);
+        $str = null;
+        for ($i = 0; $i < $len; $i ++) {
+            $str .= substr($txt, mt_rand(0, $l - 1),1);
+        }
+        return $str;
+    }
+	/** tz format +/-nnnn **/
+	public function tz_local2utc($datetime, $format)
 	{
-		$confs = array('database', 'common', $this->request('_DOMAIN'));
-		$conf_dir = APP_DIR."/conf";
-    	foreach ($confs as $conf_file) {
-			$file = "$conf_dir/$conf_file.php";
-			if (file_exists($file)) include($file);
-		}
-		return $conf;
+		return gmdate($format, strtotime($datetime));
 	}
+	public function tz_utc2local($datetime, $format)
+	{
+		return date($format, strtotime($datetime));
+	}
+	public function convert_tz($datetime, $tz_from, $tz_to)
+	{
+		$offset_local = date_offset_get(new DateTime);
+		$utc = gmdate(strtotime($datetime)+floor($from_tz/100)*3600+($from_tz%100)*60);
+	}
+	public function get_lib($lib_full_name, $load_on_fly=true)
+	{
+        $libraries = $this->global_store(self::HOOK_LIB);
+        if (isset($libraries[$lib_full_name])) return $libraries[$lib_full_name];
+		return $load_on_fly?$this->load_lib($lib_full_name):null;
+	}
+	public function get_operator()
+	{
+		return $this->env(LibACLUser::ENV_OPERATOR);
+	}
+	/** Global Data Storage **/
+	protected function global_store($name, $val=null)
+	{
+		$HOOK = 'W3S';
+		if (!isset($val)) return @$GLOBALS[$HOOK][$name];
+		if (!$val&&isset($GLOBALS[$HOOK][$name])) {
+			unset($GLOBALS[$HOOK][$name]);
+		} else {
+			$GLOBALS[$HOOK][$name] = $val;
+		}
+	}
+	/*** string bean_file(string $class_name) ***
+	 *	@description	get file for given bean class (model or library)
+	 *	@input	string $class_name
+	 *	@return	string	$file_name with full path;
+	***/
+	protected function bean_file($class_name, $active=true)
+	{
+	    $path = preg_split("/\//", strtolower(preg_replace("/([a-z0-9])([A-Z])/", "\\1/\\2", $this->class_name_format($class_name))));
+	    if ($path[0]==='lib') {
+        	$class_file = 'lib.class.php';
+	        array_shift($path);
+    	} else {
+        	$class_file = 'model.class.php';
+    	}
+    	return APP_DIR.'/'.($active?'beans':'resource/beans').'/'.join('/', $path).'/'.$class_file;
+	}
+    /*** Simple Xor encrypt/decrypt***
+     *  Principle:
+     *  A^0 = A
+     *  A^A = 0
+     *  B^A^A = B^0 = B
+    ***/
+    protected function xor_crypt($key, $input)
+    {
+        $str = null;
+        for ($i=0; $i<strlen($input);) {
+            for ($j=0; $j<strlen($key); $i++,$j++) {
+				if ($i<strlen($input)) $str .= $input[$i]^$key[$j];
+            }
+        }
+        return $str;
+    }
 	private function _postvars($post, $key=null)
 	{
 		$magic = get_magic_quotes_gpc();
 		if ($key&&!isset($_POST[$key])) return null;
 		foreach ($post as $k=>$v) {
 			if ($key&&$k!==$key) continue;
-			$post[$k] = is_array($v)?$this->_postvars($v):trim($magic?stripslashes($v):$v);
+			$post[$k] = is_array($v)?self::_postvars($v):trim($magic?stripslashes($v):$v);
 		}
 		return isset($key)?(isset($post[$key])?$post[$key]:null):$post;
 	}
-    public function load_view($view_name, $bind=null, $ext=null)
-    {
-		$temp_base = APP_DIR."/view";
-		return $this->load_template($temp_base, $view_name, $bind, $ext);
-	}
-	public function load_template($temp_base, $view_name, $bind=null, $ext=null)
+}
+
+/** Web: MVC Layer base class for both Controller and Model **/
+class Web extends Core
+{
+	const COMPONENT_CALL = 'component'; // url phase of ajax call for component
+	const REQ_SESSION = 'req_session';
+	public function configure()
 	{
-        if (!$view_name) return $bind;
-        $templates = array($temp_base."/$view_name.tpl.php");
-		if (isset($ext)||($ext=$this->template_ext())) {
-			array_unshift($templates, $temp_base."/$view_name.tpl.php".$ext);
-		}
-		$template = null;
-		foreach ($templates as $temp) {
-	        if (file_exists($temp)) {
-				$template = $temp;
-				break;
+		$conf_dir = APP_DIR."/conf";
+		$conf = array();
+		foreach (array('main',self::request('_DOMAIN')) as $conf_file) {
+			$file = "$conf_dir/$conf_file.ini";
+			if (file_exists($file)) {
+				$ini_rows = array_change_key_case(parse_ini_file($file, true), CASE_LOWER);
+				foreach ($ini_rows as $div=>$param) {
+					foreach ($param as $key=>$val) {
+						if (strpos($key, '.')!==false) {
+							$r = preg_split("/\./", $key, 2);
+							$sub = $r[0];
+							$k = $r[1];
+							if (isset($conf[$div][$sub][$k])&&is_array($val)) {
+								$conf[$div][$sub][$k] = array_merge($conf[$div][$sub][$k], $val);
+							} else {
+								$conf[$div][$sub][$k] = $val;
+							}
+						} else {
+							if (isset($conf[$div][$key])&&is_array($val)) {
+								$conf[$div][$key] = array_merge($conf[$div][$key], $val);
+							} else {
+								$conf[$div][$key] = $val;
+							}
+						}
+					}
+				}
 			}
 		}
-		if (!$template) return null;
+		$conf = array_change_key_case($conf,CASE_LOWER);
+		if (!$conf['global']['TIMEZONE']) {
+			// get system timezone
+			$conf['global']['TIMEZONE'] = function_exists('date_default_timezone_get')?date_default_timezone_get():'UTC';
+		}
+		// setting application timezone
+		if (function_exists('date_default_timezone_set')) date_default_timezone_set($conf['global']['TIMEZONE']);
+		if (!isset($conf['global']['ajax_prefix'])) $conf['global']['ajax_prefix'] = self::COMPONENT_CALL;
+		if (!isset($conf['global']['index'])) $conf['global']['index'] = Core::DEFAULT_ENTRY;
+		if (!isset($conf['model'])) $conf['model'] = array();
+		if (!isset($conf['domain'])) $conf['domain'] = array();
+		if (!isset($conf['access'])) $conf['access'] = array();
+		$conf['access']=array_change_key_case($conf['access'],CASE_LOWER);
+		$conf['model']=array_change_key_case($conf['model'],CASE_LOWER);
+		$conf['domain']=array_change_key_case($conf['domain'], CASE_LOWER);
+		if (!isset($conf['access']['model'])) $conf['access']['model'] = array();
+		for ($i=0; $i<count($conf['access']['model']); $i++) $conf['access']['model'][$i] = strtolower($conf['access']['model'][$i]);
+		return $this->conf = $conf;
+	}
+	/** convert url to array without empty head or footer **/
+	protected function url2array($url)
+	{
+		if ($url=='/') return array();
+        $r = preg_split("|/|", $url);
+        while (count($r)&&!$r[0]) array_shift($r);
+        while (count($r)&&!end($r)) array_pop($r);
+		return $r;
+	}
+	/** URL=>stream **
+	 *	@input	$url 
+	 *	@output	array stream
+	**/
+	public function mapping($url)
+	{
+		$stream = array(
+			'offset'=>null,		// matched value of pre-configure model = offset pair, it must be /somthing or null
+			'url'=>$url,		// url without offset
+			'model'=>null,
+			'method'=>null,
+			'param'=>null,		// linear array, param from url. e.g. /user/login
+			'conf'=>null,		// component conf/initial data in hash. e.g. array('key1'=>val1,'key2'=>val2,...)
+			'model_url'=>null,	// stake url for model call
+			'comp_url'=>null,	// stake url for component call. usually like: /model/ajax_prefix/method
+			'model_file'=>null,
+			'method_file'=>null,  // file without suffix (e.g .inc.php or .tpl.php)
+			'view'=>null,		  // mostly it's same as mothod_file in ajax, but folder /model/ may be change to /view/ later in no-ajax mode, and file name may be expanded as well.
+			'data'=>null,
+			'suffix'=>null,
+			'ajax'=>false,		// deside view's folder. view stay with handler if true, otherwise in view folder.
+			'format'=>'html'
+		);
+		$r = self::url2array($url);
+		$url = '/'.join('/', $r);
+		$stream['url'] = $url;
+		$default=array_search('/', $this->conf['model']);
+		$index = @$this->conf['global']['index']?$this->conf['global']['index']:Core::DEFAULT_ENTRY;
+
+		// mapping model & method via url
+		if (!count($r)) $r[0] = $this->conf['global']['index']?$this->conf['global']['index']:self::DEFAULT_ENTRY;
+		if (isset($r[0])&&$r[0]===$this->conf['global']['ajax_prefix']) {
+			//  using default model url like /component/method/param
+			if (!$default||!isset($r[1])) return null;	// not default model found
+            $stream['ajax'] = true;
+			$stream['model'] = $default;
+			$stream['method'] = $r[1];
+			$stream['comp_url'] = "/$r[0]/$r[1]";
+			if (count($r)>2) $stream['param']=array_slice($r, 2);
+		} elseif (count($r)>2&&$r[1]===$this->conf['global']['ajax_prefix']) {
+			$stream['ajax'] = true;
+			$stream['model'] = $r[0];
+			$stream['method'] = $r[2];
+			$stream['comp_url'] = "/$r[0]/$r[1]/$r[2]";
+			if (count($r)>3) $stream['param']=array_slice($r, 3);
+		} else {
+			// check if match on model configure setting
+			$offset = $url;
+			$model = null;
+			while ($offset) {
+				if ($model=array_search($offset, $this->conf['model']))	break;
+				if ($offset=='/') break;
+				$offset = dirname($offset);
+			}
+			if (!$model) {
+				// treat url as /model/... format
+				$model = $r[0];
+				$method = null;
+				array_shift($r);
+			} else {
+				// offset match found
+				list($model, $method) = strpos($model, '::')!==false?@preg_split("/::/", $model, 2):array($model, null);
+				if ($offset!='/') {
+					$url = $url==$offset?'/':substr($url, strlen($offset));
+					$stream['offset'] = $offset;
+					$stream['url'] = $url;
+				}
+				$r = self::url2array($url);
+			}
+			$stream['model'] = $model;
+			$stream['comp_url'] = ($stream['offset']?$stream['offset']:"/$model").'/'.$this->conf['global']['ajax_prefix']; // omit model if offset matched
+			if ($method) {
+				$stream['method'] = $method;
+				$stream['comp_url'] .= "/$method";
+			} else {
+				// use method specified in url
+				$stream['method'] = array_shift($r);
+				$stream['comp_url'] .= "/".$stream['method'];
+			}
+			if (count($r)) $stream['param']=$r;
+		}
+		if ($files=self::model_locator($stream['model'], $stream['method'])) {
+			list($stream['model_file'], $stream['method_file'], $stream['view']) = $files;
+		} else {
+			if ($this->conf['global']['DEBUG']) $this->error("Not found model and method files.{$stream['model']}::{$stream['method']}");
+			return null;
+		}
+		if ($stream['ajax']) $stream['view'] = $stream['method_file']; // usein view in handler for ajax request
+		return $stream;
+	}
+	public function model_locator($model, $method=null)
+	{
+		$model_file = $this->bean_file($model);
+		if (!file_exists($model_file)) return null;
+		if (!isset($method)) return $model_file;
+		$method_file = $view_file = null;
+		$suffix_inc = '.inc.php';
+		$suffix_tpl = '.tpl.php';
+		$file = dirname($model_file).'/handler/'. $method;
+		if (file_exists($file.$suffix_inc)||file_exists($file.$suffix_tpl)) $method_file = $file;
+		$file = dirname($model_file).'/view/'. $method;
+		if (file_exists($file.$suffix_tpl)) $view_file = $file;
+		return array($model_file, $method_file, $view_file);
+	}
+	public function model_verify($model_name)
+	{
+		if (in_array($model_name, $this->conf['access']['model'])) return true;
+		if (isset($this->conf['model'][$model_name])) return true;
+		if (isset($this->conf['domain'][$model_name])) {
+			$domains = preg_split("/[,\s]+/", strtolower($this->conf['domain'][$model_name]));
+			if (in_array($this->env('DOMAIN'), $domains)) return true;
+		}
+		return false;
+	}
+    public function load_view($view_name, $bind=null, $ext=null)
+    {
+		$template = "$view_name.tpl.php";
+        if (!$view_name||!file_exists($template)) return $bind;
+
         if (is_array($bind) && array_keys($bind)!==range(0, count($bind)-1)) {
             foreach ($bind as $key=>$val) {
                 $$key = $val;
@@ -88,27 +577,49 @@ Class Core
     }
 	public function redirect($url, $code=307)
 	{
-		header("location:$url", TRUE, $code);
+		if (is_array($url)) {
+			if (isset($url['url'])) {
+				$alert = isset($url['message'])?"alert('{$url['message']}');":null;
+				echo <<<EOT
+<script type="text/javascript">
+$alert
+window.location.href='{$url['url']}';
+</script>
+EOT;
+				exit;
+			}
+			$url = '/';	// invalid parameter, redirect to home
+		}
+		if ($url==='/') {
+			header("location:{$this->stream['offset']}", true, $code);
+		} elseif ($url[0]==='/') {
+			header("location:$url", TRUE, $code);
+		} else {
+			header("location:{$this->stream['offset']}/$url", true, $code);
+		}
 		exit;
 	}
-    public function file_download($filename, $body)
-    {
-        header("Pragma: public");
-        header("Expires: 0");
-        header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
-        header("Cache-Control: private",false);
-        header("Content-Type: application/octet-stream");
-        header("Content-Disposition: attachment; filename=\"$filename\";");
-        header("Content-Transfer-Encoding: binary");
-        header('Content-Length: '.strlen($body));
-        echo $body;
-        exit;
-    }
+	public function page_not_found($message=null)
+	{
+		$url = $this->env('URL');
+		echo <<<EOT
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html><head>
+<title>404 Not Found</title>
+</head><body>
+<h1>Not Found</h1>
+<p>The requested URL $url was not found on this server.</p>
+<hr>
+<address>$message</address>
+</body></html>
+EOT;
+		exit;
+	}
 
     /** export
      * output to client site with specific format
     */
-    public function output($data, $format=null)
+    public function output($data, $format=null, $name=null)
     {
         $types = array(
             'html'=>'text/html',
@@ -117,18 +628,27 @@ Class Core
             'js'=>'text/javascript',
             'xml'=>'text/xml',
             'excel'=>'application/vnd.ms-excel',
+            'word'=>'application/vnd.ms-word',
             'pdf'=>'application/pdf',
             'csv'=>'application/octet-stream',
-            'jpg'=>'image/jpeg'
+            'jpg'=>'image/jpeg',
+			'bin'=>'application/octet-stream'
         );
         $file_exts = array('excel'=>'xls','pdf'=>'pdf','csv'=>'csv');
         header("Pragma: public");  //fix IE cache issue with PHP
         header("Expires: 0");   // no cache
-        if ($format) {
-            $content_type = isset($types[$format])?$types[$format]:'text/plain';
+        if ($format||$name) {
+            $content_type = isset($types[$format])?$types[$format]:($name?'application/octet-stream':'text/plain');
             header("Content-Type: $content_type");
-            if (isset($file_exts[$format])) {
-                header("Content-Disposition: attachment; filename='downloaded.{$file_exts[$format]}'");
+            if (isset($file_exts[$format])||$name) {
+				// binary file
+				if (!$name) $name = 'download';
+				$file_name = isset($file_exts[$format])? "$name.{$file_exts[$format]}":$name;
+		        header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
+		        header("Cache-Control: private",false);
+                header("Content-Disposition: attachment; filename='$name'");
+		        header("Content-Transfer-Encoding: binary");
+        		header('Content-Length: '.strlen($data));
             }
             if ($format==='json') {
                 $info = json_encode($data);
@@ -142,28 +662,91 @@ Class Core
 		if (ob_get_contents()) ob_flush();
         exit;
     }
+	public function error($message='Internal Error.') {
+        if ($this->conf['global']['DEBUG']) debug_print_backtrace();
+		exit($message);
+	}
+    /** simple get/post method
+     * @input string $url    remote url post to
+     *        array  $data   associative array of post data
+     * @return mix response
+    **/
+    protected function http_request($method, $url, $data=array())
+    {
+        $method=strtoupper($method);
+        $data = http_build_query($data);
+        if ($method=='GET') {
+            $url.='?'.$data;
+            return file_get_contents($url);
+        }
+        if ($method=='POST') {
+            $header = "Content-type: application/x-www-form-urlencoded\r\n"."Content-Length: ".strlen($data)."\r\n";
+            $m = 'rb';
+        } else {
+            $header = "Accept-language: en\r\n";
+            $m = 'r';
+        }
+        $context_options = array (
+            'http' => array (
+                'method' => $method,
+                'header'=> $header,
+                'content' => $data
+            )
+        );
+
+        $context = stream_context_create($context_options);
+        $fp = fopen($url, $m, false, $context);
+        if (!$fp) return false;
+        $response = @stream_get_contents($fp);
+        fclose($fp);
+        return $response;
+    }
     /** Upload file with specific type
      * @input
      *  userfile    $__FILES entry
      *  target      target file path, or folder if multiple upload
-     *  callback    call back function invoked for each valid upload file
-     *  ext_inherintance use uploaded file's extension
+     *  filter 		null:allow all types , or array('jpg','gif','...')
+     *  callback    call back function invoked for each valid upload file, used for post process such as resize
      * @return
      *  String/Array    target file name or callback return
      *  false       invalid upload, maybe an attack
      *  null        valid upload but failed for move or user callback
+	 * @security	do not allow upload file with '.' prefix, or force it to be visible by remove prefix '.'.
     **/
-    public function upload_file($userfile, $target=null, $callback=null, $ext_inherintance=true)
+    public function upload_file($userfile, $target, $filter=array('jpg','gif','png','swf','bmp'), $callback=null)
     {
+		if (!count(array_keys($_FILES))) return null;
+		if (!$target) return false;
+		$name = null; // use upload file name as default
+		if (substr($target,-1)!=='/') {
+			$name = basename($target);
+			$target = dirname($target);
+		} else {
+			$target = substr($target, 0, -1);
+		}
+		if (!is_dir($target)) {
+			if (!mkdir($target, 0777, true)) return false;
+		}
         if (is_array($_FILES[$userfile]["error"])) {
             // batch upload
             $results = array();
             foreach ($_FILES[$userfile]["error"] as $key => $error) {
                 $result = false;
-                if (!$name=$_FILES[$userfile]["name"][$key]) continue;
+                if (!$_FILES[$userfile]["name"][$key]) continue;
+				$r = preg_split("/\./", $_FILES[$userfile]['name'][$key]);
+				$ext = array_pop($r);
+				$name = join('.', $r);	// batch upload do not allow specific target name, use upload file's name
+				if ($filter) {
+					if (!in_array(strtolower($ext), $filter)) continue;
+				}
                 if ($error==UPLOAD_ERR_OK) {
                     $tmp_name = $_FILES[$userfile]["tmp_name"][$key];
-                    $itarget = $target.'/'.$name;
+					if (!$name) {
+						$itarget .= $ext;
+					} else {
+						$name = preg_replace("/^\./","_", $name);
+                    	$itarget = "$target/$name.$ext";
+					}
                     if ($callback && $res=call_user_func($callback, $tmp_name, $itarget)) {
                         $name = basename($res);
                         $result = true;
@@ -181,17 +764,20 @@ Class Core
             // error
             return false;
         }
+        if (!$_FILES[$userfile]['name']) return false;  // invliad tag name
+		$r = preg_split("/\./", $_FILES[$userfile]['name']);
+		$ext = array_pop($r);
+		if (!$name&&count($r)) $name=join('.', $r);
+		if ($filter&&$filter!=='*') {
+			if (!in_array(strtolower($ext), $filter)) return false;
+		}
         $tmp_name = $_FILES[$userfile]['tmp_name'];
-        if (is_dir($target)) {
-            $target .= '/'.$_FILES[$userfile]['name'];
-        } else {
-            // check extension
-            $r1 = split('\.', $target);
-            $r2 = split('\.', $_FILES[$userfile]['name']);
-            if ($ext_inherintance && strtolower(end($r1))!=strtolower(end($r2))) {
-                $target .= '.'.strtolower(end($r2));
-            }
-        }
+		if (!$name) {
+			$target .= '/'.$ext;
+		} else {
+			$name = preg_replace("/^\./","_", $name);
+			$target .= "/$name.$ext";
+		}
         if ($callback) {
             return call_user_func($callback, $tmp_name, $target);
         } elseif (!move_uploaded_file($tmp_name, $target)) {
@@ -203,69 +789,21 @@ Class Core
 	{
 		return defined('EXT')?EXT:null;
 	}
-    public function mysession($name, $val=null)
-    {
-        if (!session_id()) session_start();
-        if ($name=='clear') {
-            $_SESSION = array();
-            session_destroy();
-            return true;
-        }
-        if (!isset($val)) return @$_SESSION[$name];
-        return $_SESSION[$name] = $val;
-    }
-    public function myglobal($name, $val=null)
-    {
-		$ENTRY = 'W3S_GLOBAL';
-        if ($name=='clear') {
-            $_GLOBAL[$ENTRY] = array();
-            return true;
-        }
-		if (!isset($_GLOBAL[$ENTRY])) $_GLOBAL[$ENTRY] = array();
-        if (!isset($val)) return @$_GLOBAL[$ENTRY][$name];
-        return $_GLOBAL[$ENTRY][$name] = $val;
-    }
-    public function logging($info, $log_file=null)
-    {
-        if (!$log_file) $log_file = APP_DIR. '/logs/'.strtolower(get_class($this)).'.log';
-        $log_info = sprintf("%s %s\n",date('Y-m-d H:i:s'),$info);
-        if ($log_file==='PRINT') {
-            echo $log_info;
-            return;
-        }
-        if (file_exists($log_file)){
-            $fp = fopen($log_file,"a");
-        } else {
-            $fp = fopen($log_file,"w");
-        }
-        fputs($fp,$log_info);
-        fclose($fp);
-    }
-	/** Global Data Storage **/
-	protected function global_store($name, $val=null)
+	public function request_session($name, $default=null, $method=null)
 	{
-		$HOOK = 'W3S';
-		if (!isset($val)) return @$_GLOBAL[$HOOK][$name];
-		if (!$val&&isset($_GLOBAL[$HOOK][$name])) {
-			unset($_GLOBAL[$HOOK][$name]);
+		$request = $this->session(self::REQ_SESSION);
+		$input = self::request($name, $method);
+		if ($method=='setter') {
+			$request[$name] = $default;
+		} elseif (isset($input)) {
+			$request[$name] = $input;
 		} else {
-			$_GLOBAL[$HOOK][$name] = $val;
+			if (isset($request[$name])) {
+				return $request[$name];
+			} 
+			$request[$name] = $default;
 		}
-	}
-    /** Unique number generator **/
-    protected function sequence($offset=0, $schema=null)
-    {
-		if (!$schema) $schema = self::W3S_SEQ;
-        if ($offset=='reset') return $this->mysession($schema, 1);
-        $seq = intval($this->mysession($schema)) + $offset;
-        if ($offset) $this->mysession($schema, $seq);
-        return $seq;
-    }
-	/** Set Stream to json format for ajax request **/
-	protected function ajax()
-	{
-	    $this->stream['view'] = null;
-    	$this->stream['format'] = 'json';
-	    $this->stream['data'] = array('success'=>false,'message'=>null);
+		$this->session(self::REQ_SESSION, $request);
+		return $request[$name];
 	}
 }
