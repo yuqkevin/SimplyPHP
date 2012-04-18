@@ -436,14 +436,13 @@ class Web extends Core
         for ($i=0; $i<count($conf['access']['model']); $i++) $conf['access']['model'][$i] = strtolower($conf['access']['model'][$i]);
         return $this->conf = $conf;
     }
-    /** convert url to array without empty head or footer **/
+    /** convert url to array without empty head or ending **/
     protected function url2array($url)
     {
         if ($url=='/') return array();
-        $r = preg_split("|/|", $url);
-        while (count($r)&&!$r[0]) array_shift($r);
-        while (count($r)&&!end($r)) array_pop($r);
-        return $r;
+		if ($url[0]=='/') $url = substr($url, 1);
+		if (substr($url, -1)=='/') $url = substr($url, 0, -1);
+        return preg_split("|/|", $url);
     }
     /** URL=>stream **
      *    @input    $url 
