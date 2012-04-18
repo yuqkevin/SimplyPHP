@@ -3,12 +3,12 @@ $conf = $this->stream['conf'];
 $style = null;
 $class = null;
 if (isset($conf['style'])) {
-	$style.=$conf['style'].";";
-	unset($conf['style']);
+    $style.=$conf['style'].";";
+    unset($conf['style']);
 }
 if (isset($conf['class'])) {
-	$class = $conf['class'];
-	unset($conf['class']);
+    $class = $conf['class'];
+    unset($conf['class']);
 }
 foreach ($conf as $key=>$val) $style.="$key:$val;";
 

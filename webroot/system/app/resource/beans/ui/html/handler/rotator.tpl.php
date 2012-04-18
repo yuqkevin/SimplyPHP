@@ -8,7 +8,7 @@
 <div class="w3s-rotator"><?php print $body;?></div>
 <script type="text/javascript">
 $(document).ready(function() {
-	var max_h = $('.w3s-rotator').innerHeight();
-	$('.w3s-rotator').w3sBox('rotator',{'stay':8000}).find('img').css('max-height',max_h);
+    var max_h = $('.w3s-rotator').innerHeight();
+    $('.w3s-rotator').w3sBox('rotator',{'stay':8000}).find('img').css('max-height',max_h);
 });
 </script>
