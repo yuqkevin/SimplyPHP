@@ -287,7 +287,7 @@ class Dao
     public function transaction_begin()
     {
         if (!$this->dbh) $this->connect();
-        $this->dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $this->dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_SILENT);
         $this->transaction = intval($this->dbh->beginTransaction()); // beginning of transaction
     }
     public function transaction_end()
