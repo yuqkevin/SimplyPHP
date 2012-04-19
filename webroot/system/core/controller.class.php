@@ -38,7 +38,9 @@ Class Controller extends Web
 	protected $conf = null;
     protected $stream = array();
 
-    private function __construct(){}	
+    private function __construct(){}
+	private function __clone(){}
+
 	public function webserver()
 	{
         if (!isset(self::$instance)) {
