@@ -38,21 +38,13 @@ Class Controller extends Web
 	protected $conf = null;
     protected $stream = array();
 
-    private function __construct(){}
-	private function __clone(){}
-
-	public function webserver()
-	{
-        if (!isset(self::$instance)) {
-            $class_name = __CLASS__;
-            self::$instance = new $class_name;
-        }
-        return self::$instance;
-	}
-    public function boot()
-    {
+    public function __construct(){
 		$this->conf = $this->configure();
 		$this->initial();
+	}
+
+    public function boot()
+    {
 		$stream = $this->mapping($this->request('_PATH'));
 		$this->stream = array_merge((array)$stream, $this->stream);  // overide with stream from initial() if it's applied
 		if (!$this->stream) $this->page_not_found($this->request('_PATH'));
@@ -70,5 +62,5 @@ Class Controller extends Web
 	protected function initial(){}	// reserved for customization
 }
 
-$ctl = Controller::webserver();
+$ctl = new Controller();
 $ctl->boot();
