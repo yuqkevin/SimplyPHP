@@ -303,7 +303,7 @@ class Dao
         return $ok;
     }
 
-    public function load_table($table_def, $name=null)
+    public function load_table($table_def)
     {
         return  new TableObject($table_def, $this);
     }
