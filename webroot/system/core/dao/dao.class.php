@@ -174,7 +174,7 @@ class Dao
         if (isset($param[$pkey])&&$param[$pkey]) return $param[$pkey];
         return $this->dbh->lastInsertId($pkey);
     }
-    public function table_search($table_def, $filter, $suffix=null, $fields=null, $offset=0, $limit=null)
+    public function table_search($table_def, $filter, $suffix=null, $fields='*', $offset=0, $limit=null)
     {
         if (!$this->dbh) $this->connect();
         $table_name = $table_def['name'];
