@@ -63,12 +63,13 @@ $ sudo /etc/init.d/apache2 reload
 ; Global configurable parameters
 ...
 [Access]
-; Accessable models via controller (multiple lines if needed): model[] = model_name
+; Accessable models via controller (multiple lines if needed):
+; model[] = ModelName
 ...
 [Domain]
 ; Model access resitriction on domain
-; following line set model_nameA only accessable for domain1.com and domain2.com
-; model_nameA = "domain1.com,domain2.com"
+; following line set ModelNameA only accessable for domain1.com and domain2.com
+; ModelNameA = "domain1.com,domain2.com"
 ...
 [Model]
 ; Default URL mapping for model
