@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="SimplyPHP : A fast, simple and scalable PHP framework" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>SimplyPHP</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/yuqkevin/SimplyPHP">Fork Me on GitHub</a>
+
+          <h1 id="project_title">SimplyPHP</h1>
+          <h2 id="project_tagline">A fast, simple and scalable PHP framework</h2>
+
+          <section id="downloads">
+            <a class="zip_download_link" href="https://github.com/yuqkevin/SimplyPHP/zipball/master">Download this project as a .zip file</a>
+            <a class="tar_download_link" href="https://github.com/yuqkevin/SimplyPHP/tarball/master">Download this project as a tar.gz file</a>
+          </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h3>Installation</h3>
+<pre class="code">
+# 1. download & extract
+$ wget -O simplyphp.tar.gz https://github.com/yuqkevin/SimplyPHP/tarball/master
+$ tar -xvf yuqkevin-SimplyPHP-<em>nnnn</em>.tar.gz
+
+# 2. mv files into web document root folder
+$ mkdir -p /var/sites
+$ mv yuqkevin-SimplyPHP-<em>nnnn</em> /var/sites/w3s
+
+# 3. virtual host configure in apache configure file:
+<VirtualHost *:80>
+	ServerName		<em>your_w3s_site.domain.com</em>
+	documentRoot	/var/sites/w3s/webroot
+</VirtualHost>
+
+# 4. Reload apache
+$ sudo /etc/init.d/apache2 reload
+
+# 5. In you browser, input address: http://<em>your_w3s_site.domain.com</em>
+#    An welcome page will be shown up. 
+#    Congradulations! You've install SimplyPHP successfully!
+</pre>
+        <h3>Application Configure</h3>
+        <ul><li><a href="install.html">Installation & Setting</a></li>
+			<li><a href="sample_hello-world.html">Learn by example I: Hello World!</a></li>
+			<li><a href="sample_blogger.html">Learn by example II: First Database-Driven Application - Blogger</a></li>
+		</ul>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">SimplyPHP maintained by <a href="https://github.com/yuqkevin">Kevin Q. Yu</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
