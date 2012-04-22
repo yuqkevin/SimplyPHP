@@ -32,7 +32,7 @@
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
         <h3>Installation</h3>
-<pre class="code">
+<code>
 # 1. download & extract
 $ wget -O simplyphp.tar.gz https://github.com/yuqkevin/SimplyPHP/tarball/master
 $ tar -xvf yuqkevin-SimplyPHP-<em>nnnn</em>.tar.gz
@@ -41,7 +41,7 @@ $ tar -xvf yuqkevin-SimplyPHP-<em>nnnn</em>.tar.gz
 $ mkdir -p /var/sites
 $ mv yuqkevin-SimplyPHP-<em>nnnn</em> /var/sites/w3s
 
-# 3. virtual host configure in apache configure file:
+# 3. virtual host configuration in apache configure file:
 <VirtualHost *:80>
     ServerName      <em>your_w3s_site.domain.com</em>
     documentRoot    /var/sites/w3s/webroot
@@ -52,9 +52,36 @@ $ sudo /etc/init.d/apache2 reload
 
 # 5. In you browser, input address: http://<em>your_w3s_site.domain.com</em>
 #    The welcome page will be shown up. 
-#    Congratulations! You've install SimplyPHP successfully!
-</pre>
+#    Congratulations! You've installed SimplyPHP successfully!
+</code>
         <h3>Application Configure</h3>
+		<p>For the quick installation, you don't need touch configure file at this moment.</p>
+		<p>But an overview of configure file will be helpful for the practice we are going to do.</p>
+		<p>Files: main.ini(default for all domains), <em>user.domain.com</em>.ini (for particular domain):</p>
+<code>
+[Global]
+; Global configurable parameters
+...
+[Access]
+; Accessable models via controller (multiple lines if needed): model[] = model_name
+...
+[Domain]
+; Model access resitriction on domain
+; following line set model_nameA only accessable for domain1.com and domain2.com
+; model_nameA = "domain1.com,domain2.com"
+...
+[Model]
+; Default URL mapping for model
+; following lines will set model welcome as default model for all request
+; but for request like /user/..., the UserModel will be override default Welcome model.
+; Welcome = "/"
+; UserModel = "/user"
+...
+[Database]
+; database connection parameters.
+...
+
+</code>
       </section>
     </div>
 
