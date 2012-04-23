@@ -100,19 +100,19 @@ $ sudo /etc/init.d/apache2 reload
          <h3>File System Structure: SimplyPHP</h3>
 <pre style="background:#333;color:#eee;">
 webroot--+--system/--+--app/--+--beans/--+--beanA/
-                     |        |          |
-                     |        |          +--beanB/
-                     |        |          ...
-                     |        +--conf/
-                     |        |
-                     |        +--resource/--+--beans/--+--beanA/
-                     |                                 |
-                     +--core/--+--dao/--+--dao.class   +--beanB/
-                               |        |              ...
-                               |        +--mysql.class
-                               |        |   
-                               |        +--oracle.class
-                               +--core.class
+         |           |        |          |
+         |           |        |          +--beanB/
+         |           |        |          ...
+         |           |        +--conf/
+         |           |        |
+         |           |        +--resource/--+--beans/--+--beanA/
+         |           |                                 |
+         |           +--core/--+--dao/--+--dao.class   +--beanB/
+         |                     |        |              ...
+         |                     |        +--mysql.class
+         +--.htaccess          |        |   
+         |                     |        +--oracle.class
+         +--index.php          +--core.class
                                |
                                +--controller.class
                                |
