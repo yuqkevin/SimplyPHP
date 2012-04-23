@@ -2,7 +2,7 @@
 // -------------------------------------------------------------------------------+
 // | Name: Controller                                                             |
 // +------------------------------------------------------------------------------+
-// | Package: SimplyPHP Framework                                                 |
+// | Package: Simply PHP Framework                                                |
 // -------------------------------------------------------------------------------+
 // | Repository: https://github.com/yuqkevin/SimplyPHP/                           |
 // +------------------------------------------------------------------------------+
@@ -30,7 +30,6 @@ function __autoload($class)
     throw new Exception("Unable to load $class via file $file.");
     return false;
 }
-
 require_once(dirname(__FILE__).'/core.class.php');
 require_once(dirname(__FILE__).'/model.class.php');
 Class Controller extends Web
