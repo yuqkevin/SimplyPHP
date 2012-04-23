@@ -442,10 +442,11 @@ class Web extends Core
         return preg_split("|/|", $url);
     }
 	/** URL=>stream **
-	 *	@input	$url 
+	 *	@input	string $url	url
+	 *			bool $method_check	force to check method file, give error if method file doesn't exist and method_check is set to true
 	 *	@output	array stream
 	**/
-	public function mapping($url)
+	public function mapping($url, $method_check=false)
 	{
 		$stream = array(
 			'offset'=>null,		// matched value of pre-configure model = offset pair, it must be /somthing or null
@@ -523,17 +524,28 @@ class Web extends Core
 				$r = $this->url2array($url);
 			}
 		}
-		if (!count($r)||!($r[0])) $r[0] = $index;	// using default index entgry if method not given in url
-		$stream['method'] = array_shift($r);
-		$stream['comp_url'] .= '/'.$stream['method'];
-		$stream['param'] = count($r)?$r:null;
-		if ($files=$this->model_locator($stream['model'], $stream['method'])) {
-			list($stream['model_file'], $stream['method_file'], $stream['view']) = $files;
-			if ($stream['ajax']) $stream['view'] = $stream['method_file']; // usein view in handler for ajax request
-		} else {
-			if ($this->conf['global']['DEBUG']) $this->error("Not found model and method files.{$stream['model']}::{$stream['method']}");
+		// verify model
+		if (!$this->model_locator($stream['model'])) {
+			$this->error("Not found model file. {$stream['model']}");
 			return null;
 		}
+		// locate method
+		if (!isset($r[0])||!$r[0]) $r[0] = $index; // using default if no method given in url
+		list($stream['model_file'], $stream['method_file'], $stream['view']) = $this->model_locator($stream['model'], $r[0]);
+		if (!((bool)$stream['method_file']||(bool)$stream['view'])&&$r[0]!=$index) {
+			// un-recognized method, using default method
+			array_unshift($r, $index);
+			list($stream['model_file'], $stream['method_file'], $stream['view']) = $this->model_locator($stream['model'], $r[0]);
+		}
+		$stream['method'] = array_shift($r);
+
+		if ($method_check&&!((bool)$stream['method_file']||(bool)$stream['view'])) {
+			$this->error("Invalid method. {$stream['method']}");
+			return null;
+		}
+		$stream['comp_url'] .= '/'.$stream['method'];
+		$stream['param'] = count($r)?$r:null;
+		if ($stream['ajax']) $stream['view'] = $stream['method_file']; // using component view instead of page view for ajax request
 		return $stream;
 	}
 	public function model_locator($model, $method=null)
@@ -552,11 +564,19 @@ class Web extends Core
 	}
 	public function model_verify($model_name)
 	{
+		$model_name = ucfirst($model_name);	// format model_name
 		if (in_array($model_name, $this->conf['access']['model'])) return true;
 		if (isset($this->conf['model'][$model_name])) return true;
 		if (isset($this->conf['domain'][$model_name])) {
 			$domains = preg_split("/[,\s]+/", strtolower($this->conf['domain'][$model_name]));
 			if (in_array($this->env('DOMAIN'), $domains)) return true;
+		}
+		// check wildcard match
+		$path = preg_split("/\//", preg_replace("/([a-z0-9])([A-Z])/", "\\1/\\2", $model_name));
+		$class_str = null;
+		foreach ($path as $frag) {
+			$class_str .= $frag;
+			if (in_array("$class_str*", $this->conf['access']['model'])) return true;
 		}
 		return false;
 	}
