@@ -33,7 +33,8 @@
       <section id="main_content" class="inner">
         <div id="localtion">
             <a href="/">Home</a>::
-            <a href="/SimplyPHP">SimplyPHP</a>
+            <a href="/SimplyPHP">SimplyPHP</a>::
+            <a href="#">Installation & Setting</a>
         </div>
 		<ul>
 			<li><a href="#install">Installation</a></li>
@@ -55,14 +56,14 @@ $ mv yuqkevin-SimplyPHP-<em>nnnn</em> /var/sites/w3s
 
 # 3. virtual host configuration in apache configure file:
 <VirtualHost *:80>
-    ServerName      <em>your_w3s_site.domain.com</em>
+    ServerName      <em>your_simplyPHP.domain.com</em>
     documentRoot    /var/sites/w3s/webroot
 </VirtualHost>
 
 # 4. Reload apache
 $ sudo /etc/init.d/apache2 reload
 
-# 5. In you browser, input address: http://<em>your_w3s_site.domain.com</em>
+# 5. In you browser, input address: http://<em>your_simplyPHP.domain.com</em>
 #    The welcome page will be shown up. 
 #    Congratulations! You've installed SimplyPHP successfully!
 </pre>
@@ -70,7 +71,7 @@ $ sudo /etc/init.d/apache2 reload
         <h3>Application Configuration</h3>
         <p>For the quick installation, you don't need touch configure file at this moment.
         But an overview of configuration file will be helpful for the practice we are going to do.</p>
-        <p>Files: webroot/system/app/conf/main.ini(default for all domains), <em>user.domain.com</em>.ini (for particular domain):</p>
+        <p>Files: webroot/system/app/conf/main.ini(default for all domains), <em>your_simplyPHP.domain.com</em>.ini (for particular domain):</p>
 <pre>
 [Global]
 ; Global configurable parameters
@@ -155,6 +156,10 @@ beanA/--+--README
                       |
                       +--db.sql
 </pre>
+
+		<div style="text-align:right;border-top:1px dotted gray;">
+			<a href="/SimplyPHP" style="float:left;">SimplyPHP</a>  <a href="sample_hello-world.html">Learn by example I: Hello World!</a>
+		</div>
       </section>
     </div>
 
