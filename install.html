@@ -85,11 +85,11 @@ $ sudo /etc/init.d/apache2 reload
 ; ModelNameA = "domain1.com,domain2.com"
 ...
 [Model]
-; Default URL mapping for model
-; following lines will set model welcome as default model for all request
-; but for request like /user/..., the UserModel will be override default Welcome model.
-; Welcome = "/"
-; UserModel = "/user"
+; Customized URL mapping for model
+; following line will set model welcome as default model for all request
+Welcome = "/"
+; but following line will force requests like /myurl/... to the model UserModel.
+UserModel = "/myurl"
 ...
 [Database]
 ; database connection parameters.
