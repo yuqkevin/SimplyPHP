@@ -1,6 +1,6 @@
 SimplyPHP - PHP Framework Software
 
-Copyright 2011 by orignal founder Qiang Yu <kevin@w3softwares.com> and contributors
+Copyright 2011 by orignal founder Qiang Yu <kevin@w3softwares.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
