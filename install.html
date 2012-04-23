@@ -103,29 +103,36 @@ webroot--+--system/--+--app/--+--beans/--+--beanA/
          |           |        |          |
          |           |        |          +--beanB/
          |           |        |          ...
-         |           |        +--conf/
+         |           |        |
+         |           |        +--conf/--+--main.ini
+         |           |        |         |
+         |           |        |         +--<em>user.domain.com</em>.ini
          |           |        |
          |           |        +--resource/--+--beans/--+--beanA/
-         |           |                                 |
-         |           +--core/--+--dao/--+--dao.class   +--beanB/
-         |                     |        |              ...
-         |                     |        +--mysql.class
+         |           |        |                        |
+         |           |        +--logs/                 +--beanB/
+         |           |                                 ...
+         |           +--core/--+--dao/--+--dao.class.php
+         |                     |        |
+         |                     |        +--mysql.class.php
          +--.htaccess          |        |   
-         |                     |        +--oracle.class
-         +--index.php          +--core.class
+         |                     |        +--oracle.class.php
+         +--index.php          |        ...
                                |
-                               +--controller.class
+                               +--core.class.php
                                |
-                               +--model.class
+                               +--controller.class.php
+                               |
+                               +--model.class.php
 </pre>
 		<a name="bean_structrue"></a>
 		<h3>File System Structure: Bean</h3>
 <pre style="background:#333;color:#eee;">
 beanA/--+--README
         |
-        +--model.class
+        +--model.class.php
         |
-        +--lib.class
+        +--lib.class.php
         |
         +--handler/--+--page1.inc.php
         |            |
