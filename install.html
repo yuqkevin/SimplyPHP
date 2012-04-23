@@ -31,10 +31,10 @@
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
-		<div id="localtion">
-			<a href="/">Home</a>::
-			<a href="/SimplyPHP">SimplyPHP</a>
-		</div>
+        <div id="localtion">
+            <a href="/">Home</a>::
+            <a href="/SimplyPHP">SimplyPHP</a>
+        </div>
         <h3>Installation</h3>
 <pre>
 # 1. download & extract
@@ -59,15 +59,15 @@ $ sudo /etc/init.d/apache2 reload
 #    Congratulations! You've installed SimplyPHP successfully!
 </pre>
         <h3>Application Configuration</h3>
-		<p>For the quick installation, you don't need touch configure file at this moment.
-		But an overview of configuration file will be helpful for the practice we are going to do.</p>
-		<p>Files: main.ini(default for all domains), <em>user.domain.com</em>.ini (for particular domain):</p>
+        <p>For the quick installation, you don't need touch configure file at this moment.
+        But an overview of configuration file will be helpful for the practice we are going to do.</p>
+        <p>Files: webroot/system/app/conf/main.ini(default for all domains), <em>user.domain.com</em>.ini (for particular domain):</p>
 <pre>
 [Global]
 ; Global configurable parameters
 ...
 [Access]
-; Accessable models via controller (multiple lines if needed):
+; Directly accessable models via http(s) (multiple lines if needed):
 ; model[] = ModelName
 ...
 [Domain]
@@ -86,6 +86,56 @@ $ sudo /etc/init.d/apache2 reload
 ; database connection parameters.
 ...
 
+</pre>
+         <h3>File System Structure</h3>
+<pre>
+webroot--+--system/--+--app/--+--beans/--+--beanA/
+                     |        |          |
+                     |        |          +--beanB/
+                     |        |          ...
+                     |        +--conf/
+                     |        |
+                     |        +--resource/--+--beans/--+--beanA/
+                     |                                 |
+                     +--core/--+--dao/--+--dao.class   +--beanB/
+                               |        |              ...
+                               |        +--mysql.class
+                               |        |   
+                               |        +--oracle.class
+                               +--core.class
+                               |
+                               +--controller.class
+                               |
+                               +--model.class
+</pre>
+		<h3>W3S Bean's File System Structure</h3>
+<pre>
+beanA/--+--README
+        |
+        +--model.class
+        |
+        +--lib.class
+        |
+        +--handler/--+--page1.inc.php
+        |            |
+        |            +--page2.inc.php
+        |            |
+        |            ...
+        |            |
+        |            +--methodB.inc.php,methodB.tpl.php
+        |            |
+        |            +--methodB.inc.php,methodB.tpl.php
+        |            ...
+        |
+        +--view/--+--page1.tpl.php
+        |         |
+        |         +--page2.tpl.php
+        |         |
+        |         ...
+        |
+        +--database/--+--db.tbl.ini
+                      |
+                      +--db.sql
 </pre>
       </section>
     </div>
