@@ -8,7 +8,7 @@
 
     <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
 
-    <title>SimplyPHP: Learn by example I: Hello World!</title>
+    <title>SimplyPHP: Dev Standard</title>
   </head>
 
   <body>
@@ -34,36 +34,25 @@
         <div id="localtion">
             <a href="/">Home</a>::
             <a href="/SimplyPHP">SimplyPHP</a>::
-			<a href="#">Learn by example I: Hello World!</a>
+			<a href="#">Dev Standard</a>
         </div>
-		<h3>Analysis: Requirements</h3>
+		<p>Before we starting our sample practice, let's clarify or build some standard rules which we will follow in practice.</p>
+		<h3>File Name: Lower Case String</h3>
+		<p>We use lower case name for all files except explicitly specified.</p>
+		<h3>Class Name: Upper Camel Case String</h3>
 		<ul>
-			<li>A page with content "Hello World!"</li>
-		</ul>
-		<h3>Design: Database</h3>
-		<p>No database needed in this case.</p>
-        <h3>Bean & Component</h3>
-		<ul><li><strong>Bean</strong>
-				<div>
-					<p>For our convenience, we create a bean named <strong>sample</strong> to contain all samples.
-Create bean Sample which all sample application will be located under this bean
-<pre>
-cd system/app/resource/beans
-mkdir sample
-# create model for SampleHello
-mkdir sample/hello
-cd sample/hello
-vi model.class.php
-</pre>
-				</div>
+			<li>All class names both in Model and Library are case-sensitive and in Upper Camel Case style. e.g MyModelClass</li>
+			<li>All library classes named with prefix "Lib", e.g. LibAcl, LibAclUser, LibSampleGbook, LibSampleBlogger, ..., etc.</li>
+			<li>Model class can not use prefix "Lib". e.g. AclUser, SampleBlogger, ..., etc</li>
+			<li>The class name reflects hirarchy of file system under the bean structure.
+				<p>The first word (drop-off Lib prefix for library class) identify the bean folder (in lower case), and the following words are sub-bean folders name (in lower case).<br />
+				   For example: SampleBlogger (LibSampleBlogger) is model (library) for sub-bean <strong>blogger</strong> under bean <strong>sample</strong>.<br />
+				   The file should located at bean/sample/blogger/model.class.php (lib.class.php)</p>
 			</li>
-			<li>URL: http://<em>your_simplyphp.domain.com</em>/SampleHello/world</li>
 		</ul>
-        <h3>Configuration: Model Access Permission</h3>
-		<h3>Finished</h3>
 
 		<div style="text-align:right;border-top:1px dotted gray;">
-			<a href="dev_standard.html" style="float:left;">Dev Standard</a>  <a href="sample_gbook.html">Learn by example II: First Database-Driven Application - GuestBook</a>
+			<a href="/SimplyPHP/install.html" style="float:left;">Installation & Setting</a>  <a href="sample_hello-world.html">Learn by example I: Hello World!</a>
 		</div>
       </section>
     </div>
@@ -79,3 +68,4 @@ vi model.class.php
 
   </body>
 </html>
+
