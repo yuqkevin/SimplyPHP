@@ -47,7 +47,7 @@
 				<ul>
 					<li>Root Bean: For our convenience, we create a bean named <strong>sample</strong> to contain all samples.
 <pre>
-cd system/app/resource/beans
+cd <em>document_root</em>/system/app/resource/beans
 mkdir sample
 cd sample
 vi model.class.php
@@ -69,7 +69,7 @@ class LibSample extends Library
 </pre>
 At this moment we haven't defined any method in classes above.
 					</li>
-					<li>Child Bean: Then we create a child bean <strong>hello</strong> under sample:
+					<li>Child Bean: Then we create a child bean <strong>hello</strong> under the bean <strong>sample</strong>:
 <pre>
 # create sub-bean hello
 mkdir hello
@@ -117,6 +117,17 @@ Hello World!
 			<li>URL: http://<em>your_simplyphp.domain.com</em>/SampleHello/world
 				<p>Every request in SimplyPHP is always a request on particular component.</p>
 			</li>
+			<li>File Structure overview of bean <strong>sample</strong> and child bean <strong>hello</strong>:
+<pre>
+beans/--+--sample/--+--model.class.php,lib.class.php
+                    |
+                    +--hello/--+--model.class.php,lib.class.php
+                               |
+                               +--handler/
+                               |
+                               +--view/--+--world.tpl.php
+</pre>
+			</li>
 		</ul>
         <h3>Access Control: Bean & Model</h3>
 		<ul><li>Enable the Bean: copy or symbol link root bean <strong>sample</strong> from app/resource/beans folder to app/beans folder
@@ -124,7 +135,7 @@ Hello World!
 cd <em>document_root</em>/system/app/beans
 ln -s ../resource/beans/sample .
 </pre></li>
-		<li>Configuration: We can add model SampleHello to model access array in domain configure file <em>your-simplyPHP.domain.com</em>.ini
+		<li>Enable Model: We can add model SampleHello to model access array in domain configure file <em>your-simplyPHP.domain.com</em>.ini
 <pre>
 [Access]
 model[] = SampleHello
