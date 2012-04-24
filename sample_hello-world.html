@@ -44,23 +44,91 @@
 		<p>No database needed in this case.</p>
         <h3>Bean & Component</h3>
 		<ul><li><strong>Bean</strong>
-				<div>
-					<p>For our convenience, we create a bean named <strong>sample</strong> to contain all samples.
-Create bean Sample which all sample application will be located under this bean
-<pre>
-cd system/app/resource/beans
+				<ul>
+					<li>Root Bean <strong>sample</strong>: For our convenience, we create a bean named <strong>sample</strong> to contain all samples.
+<pre>cd system/app/resource/beans
 mkdir sample
-# create model for SampleHello
-mkdir sample/hello
-cd sample/hello
+cd sample
 vi model.class.php
+vi lib.class.php
 </pre>
-				</div>
+model.class.php
+<pre><?php
+class Sample extends Model
+{
+}
+</pre>
+lib.class.php
+<pre><?php
+class LibSample extends Library
+{
+}
+</pre>
+At this moment we haven't defined any method in classes above.
+					</li>
+					<li>Child Bean <strong>hello</strong>: Then we create a child bean <strong>hello</strong> under sample:
+<pre>
+# create sub-bean hello
+mkdir hello
+cd hello
+# create model and lib class
+vi model.class.php
+vi lib.class.php
+</pre>
+model.class.php
+<pre><?php
+class SampleHello extends Sample
+{
+}
+</pre>
+lib.class.php
+<pre><?php
+class LibSample extends LibSample
+{
+}
+</pre>
+					</li>
+				</ul></li>
+			<li><strong>Component</strong>
+				<p>Now we are going to define the component for request of "hello world":<br>
+				&lt;Model, Handler, View&gt; = &lt;SampleHello, world, view/world.tpl.php&gt;
+<pre>
+# create handler folder
+mkdir handler
+# handler file: 
+# No logic process in this case, handler file can be skipped or use an empty file instead.
+touch handler/world.inc.php
+# create view folder
+mkdir view
+# edit view
+vi view/world.tpl.php
+</pre>
+view/world.tpl.php
+<pre>
+Hello World!
+</pre>
+				</p>
 			</li>
-			<li>URL: http://<em>your_simplyphp.domain.com</em>/SampleHello/world</li>
+			<li>URL: http://<em>your_simplyphp.domain.com</em>/SampleHello/world
+				<p>Every request in SimplyPHP is always a request on particular component.</p>
+			</li>
 		</ul>
-        <h3>Configuration: Model Access Permission</h3>
+        <h3>Bean Installation and Configuration: Model Access Permission</h3>
+		<ul><li>Install bean: copy or symbol link bean from app/resource/beans folder to app/beans folder
+<pre>
+cd <em>document_root</em>/system/app/beans
+ln -s ../resource/beans/sample .
+</pre></li>
+		<li>Configuration: We can add model SampleHello to model access array in domain configure file <em>your-simplyPHP.domain.com</em>.ini
+<pre>
+[Access]
+model[] = SampleHello
+; or use wildcard
+model[] = Sample*
+</pre></li>
+		</ul>
 		<h3>Finished</h3>
+		<p>That's it! You can access http://<em>your_simplyphp.domain.com</em>/SampleHello/world and get content with "Hello World!"</p>
 
 		<div style="text-align:right;border-top:1px dotted gray;">
 			<a href="dev_standard.html" style="float:left;">Dev Standard</a>  <a href="sample_gbook.html">Learn by example II: First Database-Driven Application - GuestBook</a>
@@ -74,8 +142,6 @@ vi model.class.php
         <p class="copyright">SimplyPHP maintained by <a href="https://github.com/yuqkevin">Yu, Qiang</a></p>
       </footer>
     </div>
-
-    
 
   </body>
 </html>
