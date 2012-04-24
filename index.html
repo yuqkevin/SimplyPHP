@@ -50,6 +50,27 @@
 			<li><strong>Table Object</strong><p>In SimplyPHP fromework, all database tables and views are objects under table hook, record is associative array which table object deals with. All CURD operations are implemented as table object's methods and no SQL needed at all.</p></li>
 		</ul>
 
+		<h3>Multi-tier Hierarchy</h3>
+<pre style="background:#333;color:#eee;">
+                         +--------------------------+
+                         |  UI (Pages, Web Service) |
+                         +--------------------------+
+                                     ||
+                                 Controller
+                                     ||
+          ++------------------++-----++----------------------------++
+          ||   Bean-1         ||   Bean-2                          ||   Bean-n
+    ......||..........  ......||..........       ...         ......||..........
+    .     ||         .  .     ||         .                   .     ||         .
+    .   Model---View .  .   Model---View .       ...         .   Model---View .
+    .     ||         .  .     ||         .                   .     ||         .
+    .   Library      .  .   Library      .       ...         .   Library      .
+    .     ||         .  .     ||         .                   .     ||         .
+    .  Database      .  .  Database      .       ...         .  Database      .
+    ..................  ..................                   ..................
+
+</pre>
+
         <h3>Documents</h3>
         <ul><li><a href="install.html">Installation & Setting</a></li>
 			<li><a href="sample_hello-world.html">Learn by example I: Hello World!</a></li>
