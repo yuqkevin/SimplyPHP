@@ -152,7 +152,7 @@ Class Core
 	public function component_url($model_name, $method, $ajax=true)
 	{
 		$model_name = ucfirst($model_name); // force to class name format
-		$url = isset($this->conf['model'][$model_name])?$this->conf['model'][$model_name]:('/'.$model_name);
+		$url = isset($this->conf['route'][$model_name])?$this->conf['route'][$model_name]:('/'.$model_name);
 		if ($ajax) $url .= ($url=='/'?null:'/').$this->conf['global']['ajax_frag'];
 		return $url.'/'.$method;
 	}
@@ -423,11 +423,11 @@ class Web extends Core
 		if (function_exists('date_default_timezone_set')) date_default_timezone_set($conf['global']['TIMEZONE']);
 		if (!isset($conf['global']['ajax_frag'])) $conf['global']['ajax_frag'] = self::COMPONENT_CALL;
 		if (!isset($conf['global']['index'])) $conf['global']['index'] = Core::DEFAULT_ENTRY;
-		if (!isset($conf['model'])) $conf['model'] = array();
+		if (!isset($conf['route'])) $conf['route'] = array();
 		if (!isset($conf['domain'])) $conf['domain'] = array();
 		if (!isset($conf['access'])) $conf['access'] = array();
 		//$conf['access']=array_change_key_case($conf['access'],CASE_LOWER);
-		//$conf['model']=array_change_key_case($conf['model'],CASE_LOWER);
+		//$conf['route']=array_change_key_case($conf['route'],CASE_LOWER);
 		//$conf['domain']=array_change_key_case($conf['domain'], CASE_LOWER);
 		if (!isset($conf['access']['model'])) $conf['access']['model'] = array();
 		//for ($i=0; $i<count($conf['access']['model']); $i++) $conf['access']['model'][$i] = strtolower($conf['access']['model'][$i]);
@@ -468,14 +468,14 @@ class Web extends Core
 		$r = $this->url2array($url);
 		$url = '/'.join('/', $r);
 		$stream['url'] = $url;
-		$default=array_search('/', $this->conf['model']);
+		$default=array_search('/', $this->conf['route']);
 		$index = @$this->conf['global']['index']?$this->conf['global']['index']:Core::DEFAULT_ENTRY;
 		// mapping model & method via url
 		$ajax_offset = strpos($url,'/'.$this->conf['global']['ajax_frag'].'/');
 		if ($ajax_offset!==false) {
 			// check if it's a valid ajax request url
 			$offset = substr($url, 0, max(1,$ajax_offset));
-			if ($model=array_search($offset, $this->conf['model'])) {
+			if ($model=array_search($offset, $this->conf['route'])) {
 				// match offset found in configure: offset/ajax/...
 				$stream['ajax'] = true;
 				$stream['model'] = $model;
@@ -495,7 +495,7 @@ class Web extends Core
 			$offset = $url;
 			$model = null;
 			while ($offset) {
-				if ($model=array_search($offset, $this->conf['model']))	{
+				if ($model=array_search($offset, $this->conf['route']))	{
 					// check if url is in /UserModel/method ...
 					if ($offset=='/'&&isset($r[0])&&preg_match("/[A-Z]/", $r[0])) $model=null; // ignore default model, using pattern /UserModel/method ...
 					break;
@@ -566,7 +566,7 @@ class Web extends Core
 	{
 		$model_name = ucfirst($model_name);	// format model_name
 		if (in_array($model_name, $this->conf['access']['model'])) return true;
-		if (isset($this->conf['model'][$model_name])) return true;
+		if (isset($this->conf['route'][$model_name])) return true;
 		if (isset($this->conf['domain'][$model_name])) {
 			$domains = preg_split("/[,\s]+/", strtolower($this->conf['domain'][$model_name]));
 			if (in_array($this->env('DOMAIN'), $domains)) return true;
