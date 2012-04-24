@@ -45,28 +45,31 @@
         <h3>Bean & Component</h3>
 		<ul><li><strong>Bean</strong>
 				<ul>
-					<li>Root Bean <strong>sample</strong>: For our convenience, we create a bean named <strong>sample</strong> to contain all samples.
-<pre>cd system/app/resource/beans
+					<li>Root Bean: For our convenience, we create a bean named <strong>sample</strong> to contain all samples.
+<pre>
+cd system/app/resource/beans
 mkdir sample
 cd sample
 vi model.class.php
 vi lib.class.php
 </pre>
 model.class.php
-<pre><?php
+<pre>
+&lt;?php
 class Sample extends Model
 {
 }
 </pre>
 lib.class.php
-<pre><?php
+<pre>
+&lt;?php
 class LibSample extends Library
 {
 }
 </pre>
 At this moment we haven't defined any method in classes above.
 					</li>
-					<li>Child Bean <strong>hello</strong>: Then we create a child bean <strong>hello</strong> under sample:
+					<li>Child Bean: Then we create a child bean <strong>hello</strong> under sample:
 <pre>
 # create sub-bean hello
 mkdir hello
@@ -76,13 +79,15 @@ vi model.class.php
 vi lib.class.php
 </pre>
 model.class.php
-<pre><?php
+<pre>
+&lt;?php
 class SampleHello extends Sample
 {
 }
 </pre>
 lib.class.php
-<pre><?php
+<pre>
+&lt;?php
 class LibSample extends LibSample
 {
 }
@@ -113,8 +118,8 @@ Hello World!
 				<p>Every request in SimplyPHP is always a request on particular component.</p>
 			</li>
 		</ul>
-        <h3>Bean Installation and Configuration: Model Access Permission</h3>
-		<ul><li>Install bean: copy or symbol link bean from app/resource/beans folder to app/beans folder
+        <h3>Access Control: Bean & Model</h3>
+		<ul><li>Enable the Bean: copy or symbol link root bean <strong>sample</strong> from app/resource/beans folder to app/beans folder
 <pre>
 cd <em>document_root</em>/system/app/beans
 ln -s ../resource/beans/sample .
