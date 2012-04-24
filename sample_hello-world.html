@@ -51,7 +51,7 @@ cd <em>document_root</em>/system/app/resource/beans
 mkdir sample
 cd sample
 vi model.class.php
-# library class can be omitted in this case which no database access required
+# lib class can be omitted in this case which has no db access
 vi lib.class.php
 </pre>
 model.class.php
@@ -61,7 +61,7 @@ class Sample extends Model
 {
 }
 </pre>
-lib.class.php (optional in this case which no database access)
+lib.class.php (optional in this case which has no db access)
 <pre>
 &lt;?php
 class LibSample extends Library
@@ -77,7 +77,7 @@ mkdir hello
 cd hello
 # create model and lib class
 vi model.class.php
-# library class can be omitted in this case which no database access required
+# lib class can be omitted in this case which has no db access
 vi lib.class.php
 </pre>
 model.class.php
@@ -87,7 +87,7 @@ class SampleHello extends Sample
 {
 }
 </pre>
-lib.class.php (optional in this case which no database access)
+lib.class.php (optional in this case which has no db access)
 <pre>
 &lt;?php
 class LibSample extends LibSample
@@ -103,7 +103,7 @@ class LibSample extends LibSample
 # create handler folder
 mkdir handler
 # handler file: 
-# No logic process in this case, handler file can be skipped or use an empty file instead.
+# world.inc.php can be omitted in this case which has no logic process.
 touch handler/world.inc.php
 # create view folder
 mkdir view
