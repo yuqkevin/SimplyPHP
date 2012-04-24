@@ -37,8 +37,22 @@
 			<a href="#">Learn by example I: Hello World!</a>
         </div>
 		<h3>Analysis: Requirements</h3>
+		<ul><li>URL: http://<em>your_simplyphp.domain.com</em>/SampleHello/world</li>
+			<li>Result: print out "Hello World!"</li>
+		</ul>
 		<h3>Design: Database</h3>
+		<p>No database needed in this case.</p>
         <h3>Coding: Bean & Component</h3>
+		<ul><li>Create bean Sample which all sample application will be located under this bean
+<pre>
+cd <em>ducment_root</em>/webroot/system/app/resource/bean
+mkdir sample
+# create model for SampleHello
+mkdir sample/hello
+cd sample/hello
+vi model.class.php
+</pre>
+			</li>
         <h3>Configuration: Model Access Permission</h3>
 		<h3>Finished</h3>
 
