@@ -38,16 +38,16 @@
         </div>
 		<p>Before we starting our sample practice, let's clarify or build some standard rules which we will follow in practice.</p>
 		<h3>File Name: Lower Case String</h3>
-		<p>We use lower case name for all files except explicitly specified.</p>
+		<p>We use lower case name for all files and folders except explicitly specified.</p>
 		<h3>Class Name: Upper Camel Case String</h3>
 		<ul>
 			<li>All class names both in Model and Library are case-sensitive and in Upper Camel Case style. e.g MyModelClass</li>
-			<li>All library classes named with prefix "Lib", e.g. LibAcl, LibAclUser, LibSampleGbook, LibSampleBlogger, ..., etc.</li>
-			<li>Model class can not use prefix "Lib". e.g. AclUser, SampleBlogger, ..., etc</li>
-			<li>The class name reflects hirarchy of file system under the bean structure.
-				<p>The first word (drop-off Lib prefix for library class) identify the bean folder (in lower case), and the following words are sub-bean folders name (in lower case).<br />
-				   For example: SampleBlogger (LibSampleBlogger) is model (library) for sub-bean <strong>blogger</strong> under bean <strong>sample</strong>.<br />
-				   The file should located at bean/sample/blogger/model.class.php (lib.class.php)</p>
+			<li>All library classes named with prefix "Lib", <br /><em>e.g. LibAcl, LibAclUser, LibSampleGbook, LibSampleBlogger, ..., etc.</em></li>
+			<li>Model class can not use prefix "Lib". <em>e.g. AclUser, SampleBlogger, ..., etc</em></li>
+			<li>The class name reflects hirarchy of file system under the bean structure.<br />
+				The first word (drop-off Lib prefix for library class) identify the bean folder (in lower case), and the followed words are sub-bean folder names (in lower case).<br />
+				   <em>For example: SampleBlogger (LibSampleBlogger) is model (library) for sub-bean <strong>blogger</strong> under bean <strong>sample</strong>.<br />
+				   The file should be located at bean/sample/blogger/model.class.php (lib.class.php)</em>
 			</li>
 		</ul>
 
