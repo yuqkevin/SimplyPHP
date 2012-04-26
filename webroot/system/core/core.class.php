@@ -109,13 +109,23 @@ Class Core
 		$this->session(self::REQUEST_CACHE, $request);
 		return $val;
 	}
+	/*** get dependency defined in class
+	 *	@input	$class_name	optional, check if class_name is defined in dependency
+	 *	@return mix	
+	 *			bool false if class_name is given but not in dependency definition
+	 *			string	name in hook if class_name is given and exits in dependency definition
+	 *			array	return whole dependencies array
+	***/
+	public function get_dependencies($class_name=null)
+	{
+		return isset($class_name)?(isset($this->dependencies[$class_name])?$this->dependencies[$class_name]:false):$this->dependencies;
+	}
 	/** Loading libraries given in array
-	 * @input array $dependencies	array(LibClassName=>HookZone,...)
 	 * return void	library will be hooked
 	**/
-	public function load_dependencies($dependencies)
+	public function load_dependencies()
 	{
-		foreach ((array)$dependencies as $class => $name) {
+		foreach ((array)$this->dependencies as $class => $name) {
 			self::load_lib($class, $name);
 		}
 	}
@@ -124,8 +134,10 @@ Class Core
 	 *		  string $name(optional) $this->lib->name, name=class_name if name is not given
 	 *		  bool	 $force(optional) true: override old hook if it exists. false:give error if hook already occupied
 	**/
-	public function load_lib($class_name, $name=null, $force=false)
+	protected function load_lib($class_name, $name=null, $force=false)
 	{
+		// only library defined in the dependency array can be loaded.
+		if (!isset($this->dependencies[$class_name])) $this->error("Error! the class $class_name is not defined in dependency array.");
 		if (!$name) $name = substr($class_name, 3); //remove 'lib' header
 		$libraries = $this->global_store(self::HOOK_LIB);
 		$lib = null;
@@ -133,8 +145,8 @@ Class Core
 			$lib = $libraries[$class_name];
 		} else {
 			$lib = new $class_name($this->conf);
-			if (@$lib->status['error_code']) {
-				$this->error('Error Code:'.$lib->status['error_code'].' '.@$lib->status['error']);
+			if (method_exists($lib, 'get_error')&&($error=$lib->get_error())) {
+				$this->error('Error Code:'.$error['error_code'].' '.$error['error']);
 			}
 			if ($this->operator&&method_exists($lib, 'operator')) $lib->operator($this->operator);
 			$libraries[$class_name] = $lib;

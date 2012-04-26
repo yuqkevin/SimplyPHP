@@ -37,7 +37,7 @@ class Model extends Web
 		// dsn in configure has higher priority than dsn in model class
 		if (isset($this->conf['dsn'][$class])) $this->dsn=$this->conf['dsn'][$class];
 		// loading libraries
-		$this->load_dependencies($this->dependencies);
+		$this->load_dependencies();
 		$this->initial();
 	}
 	public function boot()
@@ -146,16 +146,21 @@ class Model extends Web
 // the class file should be app/library/class1/class2/class3.class.php
 class Library extends Core
 {
-	public $status = array('lib'=>null,'error'=>null,'erro_code'=>null); // for cross-library info trnasfer
+	protected $status = array('lib'=>null,'error'=>null,'error_code'=>null); // for cross-library info trnasfer
 	protected $conf = null;
 	protected $tbl_ini = 'db';
 	protected $operator = null;	// current user
     protected function __construct($conf=null)
 	{
-		$this->status['lib'] = get_class($this);
 		$this->conf = $conf;
 		if ($dsn=$this->dsn_parse($this->tbl_ini)) $this->load_db($dsn, $this);
-		$this->load_dependencies($this->dependencies);
+		$this->load_dependencies();
+	}
+	public function get_error()
+	{
+		if (!$this->status['error_code']) return null;
+		$this->status['lib'] = get_class($this);
+		return $this->status;
 	}
 	/** setter/getter current operator **/
 	protected function operator($operator=null)
