@@ -156,18 +156,16 @@ class Library extends Core
 		if ($dsn=$this->dsn_parse($this->tbl_ini)) $this->load_db($dsn, $this);
 		$this->load_dependencies();
 	}
-	public function get_error()
+	public function get_error($key=null)
 	{
 		if (!$this->status['error_code']) return null;
 		$this->status['lib'] = get_class($this);
-		return $this->status;
+		return isset($key)?@$this->status[$key]:$this->status;
 	}
 	/** setter/getter current operator **/
 	protected function operator($operator=null)
 	{
-		if (!isset($operator)) return $this->get_operator();
-		$this->env(LibACLUser::ENV_OPERATOR, $operator);
-		return $this->operator=$operator;
+		return $operator?$this->set_operator($operator): $this->get_operator();
 	}
 	protected function dsn_parse($tbl_ini)
 	{

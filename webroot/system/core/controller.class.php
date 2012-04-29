@@ -31,7 +31,7 @@ function __autoload($class)
     return false;
 }
 require_once(dirname(__FILE__).'/core.class.php');
-require_once(dirname(__FILE__).'/model.class.php');
+require_once(dirname(__FILE__).'/bean.class.php');
 Class Controller extends Web
 {
     protected $conf = null;

@@ -17,15 +17,23 @@ Class Core
 	protected $dependencies = null;  // array(LibClassName=>name)  invoke: this->lib->name
 	const HOOK_LIB = 'library';
 	const HOOK_DB = 'database';
-	const HOOK_ENV = 'w3s_env';
+	const HOOK_VAR = 'w3s_var';
 	const DEFAULT_ENTRY = 'main';
 	const W3S_SEQ = 'w3s_sequence';
 	const REQUEST_CACHE = 'w3s_request';	// for input cache
 
-	/*** Env variable which can not be re-set in the same session ***/
-	public function env($name, $val=null)
+	/*** Env variable which can not be re-set in the same session
+	 *	mix	env(string $name[, mix $val[, bool $session]])
+	 *	@input	string $name	variable name
+	 *			string $val		value for setter
+	 *			bool   $session	scope control for customer variable: false if in global, true if in session
+	 *	@return	mix	returns value for given name
+	 ***/
+	public function env($name, $val=null, $session=false)
 	{
-		$name = strtoupper($name);
+		$env_name = "env:$name"; // using 'env:' to aviod name conflict with regular variable in hook
+		if ($session) return $this->session($env_name, $val);	// for explicit session varaibles
+		// otherwise, check hook in order:  W3S Reserve(readonly) -> $_SERVER(readonly) -> $GLOBALS -> session
 		if ($name==='DOMAIN') {
 			$r = preg_split("/\./", strtolower($_SERVER['HTTP_HOST']));
 			if ($r[0]==='www') array_shift($r);
@@ -37,17 +45,42 @@ Class Core
 		} elseif (isset($_SERVER[$name])) {
 			return $_SERVER[$name];
 		}
-		// Customized env variable in session
-        if (!session_id()) session_start();
-        $HOOK = self::HOOK_ENV;
-		if (!isset($val)) return @$_SESSION[$HOOK][$name];
-		if (!$val) {
-			if (isset($_SESSION[$HOOK][$name])) unset($_SESSION[$HOOK][$name]);
-		} else {
-			$_SESSION[$HOOK][$name] = $val;
-		}
-		return $_SESSION[$HOOK][$name] = $val;
+		// check global and session
+        $HOOK = self::HOOK_VAR;
+		if (!isset($GLOBALS[$HOOK][$env_name])&&$this->session($env_name)) return $this->session($env_name, $val);		// find pre-defined in session only
+		// use global hook as default
+		return self::_hook_var(&$GLOBALS, $env_name, $val);
 	}
+	// session getter/setter
+    public function session($name, $val=null)
+    {
+        if (!session_id()) session_start();
+		if ($name==='id') return session_id();
+        $HOOK = self::HOOK_VAR;
+        if ($name=='clear') {
+            unset($_SESSION[$HOOK]);
+            return true;
+        }
+		return self::_hook_var(&$_SESSION, $name, $val);
+    }
+	private function _hook_var(&$scope, $name, $val)
+	{
+		$HOOK = self::HOOK_VAR;
+        if (!isset($scope[$HOOK])) $scope[$HOOK]=array();
+        if (!isset($val)) return isset($scope[$HOOK][$name])?$scope[$HOOK][$name]:null;
+        if ($val=='clear') $val=null;
+        if ($val=='reset') $val='';
+        return $scope[$HOOK][$name]=$val;
+	}
+    /** Unique number generator **/
+    public function sequence($offset=0, $schema=null)
+    {
+		if (!$schema) $schema = self::W3S_SEQ;
+        if ($offset=='reset') return self::session($schema, 1);
+        $seq = intval(self::session($schema)) + $offset;
+        if ($offset) self::session($schema, $seq);
+        return $seq;
+    }
 
 	/*** mix request(string $name[, string $method])
 	 *	@description	get request parameters. method: get,post,cache. post>get if non method given. post>get>session if method is 'cache'
@@ -64,7 +97,7 @@ Class Core
 			if (isset($_GET['_ENTRY'])) unset($_GET['_ENTRY']);
 			return $_GET;
 		} elseif ($name==='_CACHE') {
-			return $this->session(self::REQUEST_CACHE);
+			return self::session(self::REQUEST_CACHE);
 		} elseif ($name==='_DOMAIN') {
             $r = preg_split("/\./", strtolower($_SERVER['HTTP_HOST']));
             if ($r[0]==='www') array_shift($r);
@@ -76,7 +109,7 @@ Class Core
 		}
 		$default_val = null;
 		if ($method=='cache') {
-			$request = $this->session(self::REQUEST_CACHE);
+			$request = self::session(self::REQUEST_CACHE);
 			$default_val = @$request[$name];
 		}
 		if ($method=='get') return trim(@$_GET[$name]);
@@ -84,7 +117,7 @@ Class Core
 		$val = isset($_POST[$name])?self::_postvars($_POST, $name):(isset($_GET[$name])?trim($_GET[$name]):$default_val);
 		if ($method=='cache') {
 			$request[$name] = $val;
-			$this->session(self::REQUEST_CACHE, $request);
+			self::session(self::REQUEST_CACHE, $request);
 		}
 		return $val;
 	}
@@ -233,29 +266,6 @@ Class Core
 		$data = @unserialize($str);
 		return ($data===false&&$str!=='b:0;')?$str:$data;
 	}
-	// session within class zone
-    public function session($name, $val=null)
-    {
-        if (!session_id()) session_start();
-		if ($name==='id') return session_id();
-        if ($name=='clear') {
-            $_SESSION = array();
-            session_destroy();
-            return true;
-        }
-		if (!isset($val)) return @$_SESSION[$name];
-		if ($val=='reset') $val='';
-		return $_SESSION[$name]=$val;
-    }
-    /** Unique number generator **/
-    public function sequence($offset=0, $schema=null)
-    {
-		if (!$schema) $schema = self::W3S_SEQ;
-        if ($offset=='reset') return self::session($schema, 1);
-        $seq = intval(self::session($schema)) + $offset;
-        if ($offset) self::session($schema, $seq);
-        return $seq;
-    }
     public function hasharray2array($lines, $fkey, $fval=null)
     {
         $array = array();
@@ -334,7 +344,13 @@ Class Core
 	}
 	public function get_operator()
 	{
-		return $this->env(LibACLUser::ENV_OPERATOR);
+		if ($user=$this->get_lib('LibAclUser')) return $user->info();
+		return null;
+	}
+	public function set_operator($operator)
+	{
+		if ($user=$this->get_lib('LibAclUser')) return $user->session_cookie('set', $operator);
+		return null;
 	}
 	/** Global Data Storage **/
 	protected function global_store($name, $val=null)
