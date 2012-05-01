@@ -34,7 +34,7 @@
           Database   ........ Data Layer (DBMS)
 
   . File Hirachy
-    . system --+-- core --+-- core.class.php,controller.class.php,model.class.php
+    . system --+-- core --+-- core.class.php,controller.class.php,bean.class.php
                |          |
                |          +-- db ---- dao.class.php,mysql.class.php,oracle.class.php,...
                |
