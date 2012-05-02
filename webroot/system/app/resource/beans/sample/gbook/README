@@ -1,0 +1,21 @@
+Sample: A Simple Guest Book
+Use Cases:
+1. Listing	List newest 20 items of guest message
+2. Writing	Post a new message, and auto-redirected to listing page after post successfully, otherwise stay in writing page.
+3. Maintain	List all message posted from client IP and provide action button: delete, edit
+   . Delete	Delete particular message, refresh maintain page if success, otherwise give the error message.
+   . Edit	Edit particular message
+     . goto the edit page which contains message textarea tag and submit/cancel button
+     . submit	goto maintain page if success, otherwise stay in edit page
+     . cancel	goto maintain page
+
+Bean Design
+. Model	SampleBbook
+  . main		default component to implement listing
+  . writer		writer component
+  . maintain	maintain component implement Edit/Delete
+. Library	LibSampleGbook
+  . post 	db table manipulating method (read/create/delete/update)
+  . listing	retrieve listing of post records
+
+
