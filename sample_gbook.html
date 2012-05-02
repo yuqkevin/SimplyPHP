@@ -65,7 +65,7 @@ prefix  = "post_"
 		</ul>
         <h3>Bean & Component</h3>
 		<p>We will create a child bean <strong>gbook</strong> under the bean we previously created <strong>sample</strong>.</p>
-		<ul><li>File Preparing
+		<ul><li><strong>File Preparing</strong>
 			<pre>
 mkdir gbook
 cd gbook
@@ -76,9 +76,10 @@ touch database/db.sql database/db.tbl.ini
 vi database/db.sql database/db.tbl.ini
 			</pre>
 			</li>
-			<li><h4>Business Logic: Message Operations in Library</h4>
+			<li><strong>Business Logic: Message Operations in Library</strong>
 				<p>Since we have defined database in db.tbl.ini, the <strong>Table Object</strong> for each database table will be automatically loaded and hooked with name as defined under library object's table hook ($this->tbl) when library is loaded.</p>
 				<p>In library (lib.class.php) we need two functions for post (message): post searching and single post operations</p>
+lib.class.php:
 <pre>
 &lt;?php
 class LibSampleGbook extends LibSample
@@ -112,7 +113,7 @@ class LibSampleGbook extends LibSample
 }
 </pre>
 			</li>
-			<li><h4>Component: User Interface Design & Implementation</h4>
+			<li><strong>Component: User Interface Design & Implementation</strong>
 				
 			</li>
 		</ul>
