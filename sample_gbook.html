@@ -47,14 +47,14 @@
 <pre>
 create table sample_gbook (
   post_id               int unsigned not null auto_increment primary key,
-  post_guest            varchar(128) not null,
-  post_ip               varchar(32),
-  post_timestamp        timestamp default current_timestamp,
-  post_content          varchar(512)
+  post_guest            varchar(128) not null comment 'Guest User name or Anonymous',
+  post_ip               varchar(32) comment 'Guest IP address',
+  post_timestamp        timestamp default current_timestamp comment 'the timestamp of message created',
+  post_content          varchar(512) comment 'Message body'
 );
 </pre>
 			</li>
-			<li>Table Definition File (/bean/sample/gbook/database/db.tbl.ini):<br />
+			<li>Table Definition File (bean/sample/gbook/database/db.tbl.ini):<br />
 <pre>
 [gbook]
 name    = "sample_gbook"
@@ -64,7 +64,58 @@ prefix  = "post_"
 			</li>
 		</ul>
         <h3>Bean & Component</h3>
-		<ul><li><em>Child Bean</em> under bean <strong>sample</strong>: <strong>gbook</strong>
+		<p>We will create a child bean <strong>gbook</strong> under the bean we previously created <strong>sample</strong>.</p>
+		<ul><li>File Preparing
+			<pre>
+mkdir gbook
+cd gbook
+touch model.class.php lib.class.php
+mkdir database handler view
+touch database/db.sql database/db.tbl.ini
+# edit db.sql and db.tbl.ini with content in Database section
+vi database/db.sql database/db.tbl.ini
+			</pre>
+			</li>
+			<li><h4>Business Logic: Message Operations in Library</h4>
+				<p>Since we have defined database in db.tbl.ini, the <strong>Table Object</strong> for each database table will be automatically loaded and hooked with name as defined under library object's table hook ($this->tbl) when library is loaded.</p>
+				<p>In library (lib.class.php) we need two functions for post (message): post searching and single post operations</p>
+<pre>
+&lt;?php
+class LibSampleGbook extends LibSample
+{
+    function post($act, $id, $param=null)
+    {
+        if (!$id&&$act!='create') {
+            $this->error("No message given for operating.");
+            return false;
+        }
+        switch ($act) {
+            case 'read':
+                return $this->tbl->gbook->read($id);
+                break;
+            case 'create':
+                return $this->tbl->gbook->create($param);
+                break;
+            case 'update':
+                return $this->tbl->gbook->update($id, $param);
+                break;
+            case 'delete':
+                return $this->tbl->gbook->delete($id);
+                break;
+        }
+        return false;
+    }
+    function search($filter, $suffix=null)
+    {
+        return $this->tbl->gbook->search($filter, $suffix);
+    }
+}
+</pre>
+			</li>
+			<li><h4>Component: User Interface Design & Implementation</h4>
+				
+			</li>
+		</ul>
         <h3>Configuration: Model Access Permission</h3>
 		<h3>Finished</h3>
 

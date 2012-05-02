@@ -44,8 +44,7 @@
 		<p>No database needed in this case.</p>
         <h3>Bean & Component</h3>
 		<ul><li><strong>Bean</strong>
-				<ul>
-					<li>Root Bean: For our convenience, we create a bean named <strong>sample</strong> to contain all samples.
+			<p>Root Bean: For our convenience, we create a bean named <strong>sample</strong> to contain all samples.
 <pre>
 cd <em>document_root</em>/system/app/resource/beans
 mkdir sample
@@ -69,8 +68,9 @@ class LibSample extends Library
 }
 </pre>
 At this moment we haven't defined any method in classes above.
-					</li>
-					<li>Child Bean: Then we create a child bean <strong>hello</strong> under the bean <strong>sample</strong>:
+					</p>
+				<ul>
+					<li>Child Bean: We will create a child bean <strong>hello</strong> under the bean <strong>sample</strong>:
 <pre>
 # create sub-bean hello
 mkdir hello

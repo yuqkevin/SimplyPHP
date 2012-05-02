@@ -169,8 +169,8 @@ pre, code {
   border-radius: 2px;
   -moz-border-radius: 2px;
   -webkit-border-radius: 2px;
-
-
+  max-height:10em;
+  overflow:auto;
 
 }
 
