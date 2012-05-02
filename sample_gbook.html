@@ -37,8 +37,34 @@
 			<a href="#">Learn by example II: First Database-Driven Application - GuestBook</a>
         </div>
 		<h3>Requirements</h3>
+		<ul>
+			<li>Create new message with given user name or anonymous</li>
+			<li>Listing latest 20 message by date</li>
+			<li>Edit/Delete message which in posted from client's IP address</li>
+		</ul>
 		<h3>Database</h3>
+		<ul><li>Table Design (beans/sample/gbook/database/db.sql):<br />
+<pre>
+create table sample_gbook (
+  post_id               int unsigned not null auto_increment primary key,
+  post_guest            varchar(128) not null,
+  post_ip               varchar(32),
+  post_timestamp        timestamp default current_timestamp,
+  post_content          varchar(512)
+);
+</pre>
+			</li>
+			<li>Table Definition File (/bean/sample/gbook/database/db.tbl.ini):<br />
+<pre>
+[gbook]
+name    = "sample_gbook"
+pkey    = "post_id"
+prefix  = "post_"
+</pre>
+			</li>
+		</ul>
         <h3>Bean & Component</h3>
+		<ul><li><em>Child Bean</em> under bean <strong>sample</strong>: <strong>gbook</strong>
         <h3>Configuration: Model Access Permission</h3>
 		<h3>Finished</h3>
 
