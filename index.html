@@ -45,7 +45,7 @@
 		</ul>
 
 		<h3>Key Concepts</h3>
-		<ul><li><strong>Component</strong><p>It is a function unit in UI. A page can be regarded as a special component: container. Every component is mapped to a particular vector array: &lt;<strong>Model</strong>, <strong>Handler</strong>, <strong>View</strong>&gt;. From point view of programmer, the <strong>Component</strong> is a included handler of <strong>Model</strong>. So sometimes we also call handler as <strong>Method</strong>.</p></li>
+		<ul><li><strong>Component</strong><p>It is a function unit in UI. Page is a special component: container. Every component is mapped to a particular pair of &lt;<strong>Model</strong>, <strong>Handler</strong>&gt;. From point view of programmer, the <strong>Component</strong> is also an included handler within <strong>Model</strong>. So sometimes we also call handler as <strong>Method</strong>. The <strong>View</strong> is wrapper of <strong>Component</strong>.</p></li>
 			<li><strong>Bean</strong><p>It is a structure contains files for particular application: Component set &lt;model, handler, view&gt;, Library class(business logic) and Database(table) definition.</p></li>
 			<li><strong>Table Object</strong><p>In SimplyPHP fromework, all database tables and views are objects under table hook, record is associative array which table object deals with. All CURD operations are implemented as table object's methods and no SQL needed at all.</p></li>
 		</ul>
