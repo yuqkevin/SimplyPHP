@@ -92,23 +92,23 @@ class LibSampleGbook extends LibSample
         }
         switch ($act) {
             case 'read':
-                return $this->tbl->gbook->read($id);
+                return $this->tbl->gbook-><strong>read</strong>($id);
                 break;
             case 'create':
-                return $this->tbl->gbook->create($param);
+                return $this->tbl->gbook-><strong>create</strong>($param);
                 break;
             case 'update':
-                return $this->tbl->gbook->update($id, $param);
+                return $this->tbl->gbook-><strong>update</strong>($id, $param);
                 break;
             case 'delete':
-                return $this->tbl->gbook->delete($id);
+                return $this->tbl->gbook-><strong>delete</strong>($id);
                 break;
         }
         return false;
     }
     function search($filter, $suffix=null)
     {
-        return $this->tbl->gbook->search($filter, $suffix);
+        return $this->tbl->gbook-><strong>search</strong>($filter, $suffix);
     }
 }
 </pre>
