@@ -192,6 +192,8 @@ pre code {
   box-shadow: none;
 }
 
+pre strong,code strong {color:red;}
+
 blockquote {
   color: #666;
   margin-bottom: 20px;
