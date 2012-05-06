@@ -46,7 +46,7 @@
 
 		<h3>Key Concepts</h3>
 		<ul><li><strong>MVC</strong><p>In SimplyPHP, <strong>Model</strong> is the core class dealing with client request. It is <strong>Component</strong> oriented, retrieving application data based on client request and invoked by <strong>Controller</strong> only.</p>
-				<p>The <strong>View</strong> is presentation wrapper of data retrieved <strong>Model</strong>.</p>
+				<p>The <strong>View</strong> is presentation wrapper of data retrieved by <strong>Model</strong>.</p>
 				<p>The <strong>Controller</strong> is minimized in SimplyPHP and not for cumstomizing. But it is the only interface to invoke and boot the application <strong>Model</strong>.</p>
 			</li>
 			<li><strong>Component</strong><p>It is a function unit in UI. Page is a complex component which may contain multiple components. Every component is mapped to a pair of &lt;<strong>Model</strong>, <strong>Handler</strong>&gt;. From programmer's point of view, the <strong>Component</strong> is also an included handler within <strong>Model</strong>. So sometimes we also call handler as <strong>Method</strong>.</p><p>In SimplyPHP, <strong>All requests are component request</strong>. The typical SimplyPHP request is something like <em>http://yourappdomain.com/ModelName/HandlerName/...</em></p></li>
