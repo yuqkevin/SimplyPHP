@@ -193,7 +193,13 @@ pre code {
 }
 
 pre strong,code strong {color:red;}
-
+pre.black {
+	background:#333;
+	color:#eee;
+}
+pre.full {
+	max-height:10000px;
+}
 blockquote {
   color: #666;
   margin-bottom: 20px;
