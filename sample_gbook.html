@@ -119,13 +119,27 @@ class LibSampleGbook extends LibSample
 					<li><strong>writer</strong>: text editor for new message</li>
 					<li><strong>maintainer</strong>: maintaining single post: update or delete</li>
 				</ul>
+				<p>SampleGbook's Bean File Structure
+<pre>
+beans/sample/gbook/ --+-- lib.class.php, model.class.php
+                      |
+                      +-- handler -- main.inc.php,maintainer.inc.php,writer.inc.php
+                      |
+                      +-- view -- main.tpl.php,maintainer.tpl.php,writer.tpl.php
+                      |
+                      +-- database -- db.sql, db.tbl.ini
+</pre>
+				</p>
 			</li>
 		</ul>
         <h3>Configuration: Model Access Permission</h3>
+			<p>Since the root bean sample has been symbol linked under app/beans, child beans of sample will be automatically installed.</p>
+			<p>To enable model access, model SampleGbook needs to be added to "Access" section in configure file.<br />
+				Since there is a wildcard setting "Sample*" in "Access" section, all model start with "Sample" will be accessable in the application.</p>
 		<h3>Finished</h3>
-
+			<p>OK, it's done. Let's start with access URL http://<em>your_simplyphp.domain.com</em>/SampleGbook. You'l see a Guest Book message listing with empty messages.<br />Then you can add new message, maintainer (edit/delete) messages.</p>
 		<div style="text-align:right;border-top:1px dotted gray;">
-			<a href="sample_hello-world.html" style="float:left;">SimplyPHP: Learn by example I: Hello World!</a>  <a href="sample_blogger.html">Learn by example III: A Complete Application - Blog</a>
+			<a href="sample_hello-world.html" style="float:left;">SimplyPHP: Learn by example I: Hello World!</a>  <a href="sample_blogger.html"><Learn by example III: A Complete Application - Blog></a>
 		</div>
       </div>
     </div>
