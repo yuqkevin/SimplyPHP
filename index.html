@@ -46,8 +46,8 @@
 
 		<h3>Key Concepts</h3>
 		<ul><li><strong>Component</strong><p>It is a function unit in UI. Page is a complex component which may contain multiple components. Every component is mapped to a pair of &lt;<strong>Model</strong>, <strong>Handler</strong>&gt;. From programmer's point of view, the <strong>Component</strong> is also an included handler within <strong>Model</strong>. So sometimes we also call handler as <strong>Method</strong>. The <strong>View</strong> is wrapper of <strong>Component</strong> for representation.</p><p>In SimplyPHP, <strong>All requests are component request</strong>. The typical SimplyPHP request is something like <em>http://yourappdomain.com/ModelName/HandlerName/...</em></p></li>
-			<li><strong>Bean</strong><p>It is a structure contains files for particular application: Model(Components), Library(business logic) and Database definition(tables).</p></li>
-			<li><strong>Table Object</strong><p>In SimplyPHP fromework, table and view are object <strong>Table Object</strong>, record is associative array, search filter is assorciative array as well. CURD are basic methods of <strong>Table Object</strong>, no SQL needed at all.</p></li>
+			<li><strong>Bean</strong><p>It is a structure contains files for particular application: Model(components), Library(business logic) and Database definition(tables).</p></li>
+			<li><strong>Table Object</strong><p>In SimplyPHP fromework, table (or view) which is defined in bean will be converted to object and hooked at <strong>Table Object Hook</strong> automatically when the <strong>Library</strong> is loaded. <strong>Record</strong> is associative array. <strong>Filter</strong> for searching is assorciative array. <strong>Record Set</strong> is linear array of <strong>Record</strong>. <strong>CURD</strong> are basic methods of <strong>Table Object</strong>, no SQL needed for typical query.</p></li>
 		</ul>
 
 		<h3>Multi-tier Hierarchy</h3>
