@@ -95,14 +95,11 @@ class Dao
 		}
 		$sth = $this->dbh->prepare($query);
 		if (!$sth) {
-			$this->error = $this->dbh->errorInfo();
-			$this->transaction *= 2; // set error if in transaction
-			return false;
+			return $this->error_handle($this->dbh->errorInfo());
 		}
 		$ok = $sth->execute(array_merge($binding,$binding2));
 		if ($ok===false) {
-			$this->error = $sth->errorInfo();
-			$this->transaction *= 2; // set error if in transaction
+			return $this->error_handle($sth->errorInfo());
 		}
 		return $ok;
 	}
@@ -122,14 +119,11 @@ class Dao
 		}
 		$sth = $this->dbh->prepare($query);
 		if (!$sth) {
-			$this->error = $this->dbh->errorInfo();
-			$this->transaction *= 2; // set error if in transaction
-			return false;
+			return $this->error_handle($this->dbh->errorInfo());
 		}
 		$cnt = $sth->execute($binding);
 		if ($cnt===false) {
-			$this->error = $sth->errorInfo();
-			$this->transaction *= 2; // set error if in transaction
+			return $this->error_handle($sth->errorInfo());
 		}
 		return $cnt;
 	}
@@ -161,15 +155,11 @@ class Dao
 		list($ins_pair, $binding) = $this->param_scan($param, 'insert');
 		$sth = $this->dbh->prepare("insert into $table_name ({$ins_pair['fields']}) values ({$ins_pair['values']})");
 		if (!$sth) {
-			$this->error = $this->dbh->errorInfo();
-			$this->transaction *= 2; // set error if in transaction
-			return false;
+			return $this->error_handle($this->dbh->errorInfo());
 		}
 		$ok = $sth->execute($binding);
 		if ($ok===false) {
-			$this->error = $sth->errorInfo();
-			$this->transaction *= 2; // set error flag if in transaction
-			return false;
+			return $this->error_handle($sth->errorInfo());
 		}
 		if (isset($param[$pkey])&&$param[$pkey]) return $param[$pkey];
 		return $this->dbh->lastInsertId($pkey);
@@ -190,12 +180,12 @@ class Dao
 		$attr = $offset?array(PDO::ATTR_CURSOR=>PDO::CURSOR_SCROLL):array();
 		$sth = $this->dbh->prepare($query, $attr);
 		if (!$sth) {
-			$this->error = $this->dbh->errorInfo();
-			return false;
+			return $this->error_handle($this->dbh->errorInfo());
 		}
 		$ok = $sth->execute($binding);
 		if ($ok===false) {
-			$this->error = $sth->errorInfo();
+			$this->error_handle($sth->errorInfo());
+			$sth->closeCursor();
 			return false;
 		}
 		if (preg_match("/^(count|max|min)\(([\w\*]+)\)$/", strtolower($fields))) {
@@ -236,12 +226,12 @@ class Dao
 		list($filter_str, $binding) = $this->param_scan($filter, 'filter');
 		$sth = $this->dbh->prepare("select $fields,$level as LEVEL from $table_name where $filter_str order by $field_weight desc");
 		if (!$sth) {
-			$this->error = $this->dbh->errorInfo();
-			return false;
+			return $this->error_handle($this->dbh->errorInfo());
 		}
 		$ok = $sth->execute($binding);
 		if ($ok===false) {
-			$this->error = $sth->errorInfo();
+			$this->error_handle($sth->errorInfo());
+			$sth->closeCursor();
 			return false;
 		}
         $lines = array();
@@ -259,12 +249,13 @@ class Dao
 		if (!$this->dbh) $this->connect();
         $sth = $this->dbh->prepare($query);
 		if (!$sth) {
-			$this->error = $this->dbh->errorInfo();
+			return $this->error_handle($this->dbh->errorInfo());
 			return false;
 		}
 		$ok = $sth->execute($param);
 		if ($ok===false) {
-			$this->error = $sth->errorInfo();
+			$this->error_handle($sth->errorInfo());
+			$sth->closeCursor();
 		}
 		return $ok;
 	}
@@ -273,14 +264,12 @@ class Dao
 		if (!$this->dbh) $this->connect();
         $sth = $this->dbh->prepare($query);
 		if (!$sth) {
-			$this->error = $this->dbh->errorInfo();
-			return false;
+			return $this->error_handle($this->dbh->errorInfo());
 		}
         foreach ($param as $key=>$init_val) $sth->bindParam(":$key",&$param[$key]);
         $ok = $sth->execute();
 		if ($ok===false) {
-			$this->error = $sth->errorInfo();
-			return false;
+			return $this->error_handle($sth->errorInfo());
 		}
         return count(array_keys($param))===1?array_shift(array_values($param)):$param;
 	}
@@ -300,7 +289,27 @@ class Dao
 			$this->dbh->rollBack();
 		}
 		$this->transaction = 0; //end of transaction
-		return $ok;
+		return $ok?$ok:$this->error_handle();
+	}
+	/*** error handle
+	 *	@description	database error user handler, print error info and exit if it's not transaction operation, or set transation error count and return false
+	 *	@input array $err	optional, the error info returned from pdo
+	 *	@output	true if not error happened, false if error happened and exit scripts if error happened and no transaction setting
+	***/
+	public function error_handle($err=null)
+	{
+		if ($err) $this->error = $err;
+		if ($this->error&&!$this->transaction) {
+			if (defined('DEBUG')&&DEBUG) {
+				print_r($this->error);
+				debug_print_backtrace();
+			}
+			exit("Sorry, we can not process your request at this moment. Please try again later.");
+		} elseif ($this->error) {
+			$this->transaction *= 2; // set error if in transaction
+			return false;
+		}
+		return true;
 	}
 
     public function load_table($table_def)
