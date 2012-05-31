@@ -140,6 +140,61 @@ Class Core
 		}
 		return $val;
 	}
+	/*** mix cache(string $name[, mix $val[, int $expire]])
+	 *	@description	getter/setter data cacher as configured
+	 *	@input	$name	variable name (key)
+	 *			$val	value of variable for setter
+	 *			$ttl	lifetime in seconds (for setter), 0 for never expired
+	 *	@return	1. For getter, value of variable in cache, or false if no cache found or expired
+	 *			2. For setter, true if cache success, or false if failed to cache
+	***/
+	public function cache($name, $val=null, $ttl=0)
+	{
+		$engine = strtolower($this->conf['cache']['engine']);
+		switch ($engine) {
+			case 'memcache':
+				$memcache = new Memcache();
+				foreach ($this->conf['cache']['server'] as $server) {
+					list($host, $port) = strpos($server,':')?preg_split("/:/", $server):array($server, 11211);
+					$memcache->addServer($host, $port);
+				}
+				$compressed = $this->conf['cache']['compressed']?1:0;
+				if (isset($val)) {
+					return $memcache->set($name, $val, $compressed, time()+$ttl);
+				}
+				return $memcache->get($name);
+			case 'xcache':
+                if (isset($val)) {
+                    return xcache_set($name, $val, $ttl);
+                }
+                return xcache_isset($name)?xcache_get($name):false;
+			case 'apc':
+				if (isset($val)) {
+					return apc_store($name, $val, $ttl);
+				}
+				return apc_fetch($name);
+			default: // local file 
+				$pool = isset($this->conf['cache']['local'])&&$this->conf['cache']['local']?$this->conf['cache']['local']:'/tmp/cache';
+				$file_name = bin2hex($name);
+				$div = $pool.'/'.strlen($name)%10;	// sub folder 0~9
+				if (!is_dir($div)) {
+					if (!mkdir($div, 0700, true)) $this->error("Failed to create cache pool $div. Please check your cache setting in configure file.");
+				}
+				if (isset($val)) {
+					// write into cache in format expire_timestanmp:content
+					$expire = sprintf("%010d", $ttl?(time()+$ttl):0);
+					return (bool) file_put_contents($file_name, "$expire:$val");
+				}
+				// read cache
+				if (file_exists($file_name)) {
+					$content = file_get_contents($file_name);
+					$expire = intval(substr($content, 0, 10));
+					if (time()<=$expire||$expire===0) return substr($content, 11); // actively cached
+					// expired
+				}
+				return false;
+		}
+	}
 	/*** get dependency defined in class
 	 *	@input	$class_name	optional, check if class_name is defined in dependency
 	 *	@return mix	
@@ -241,6 +296,7 @@ Class Core
         $data = array($hour, $min, $sec, $hour>12?($hour%12):$hour, $hour>=12?'pm':'am');
         return str_replace($src, $data, $format);
     }
+	/*** set logging for specific command ***/
 	public function record($cmd, $zone='debug')
 	{
 		if ($cmd) {
@@ -254,10 +310,9 @@ Class Core
 	}
 	public function logging($message, $zone='debug')
 	{
-		$log_file = APP_DIR."/logs/$zone.log";
-		$fp = fopen($log_file, 'a') or $this->error(basename($log_file));
-		fwrite($fp, sprintf("%s\t%s\n", date('Y-m-d H:i:s'), $message));
-		fclose($fp);
+		$log_file = $this->conf['global']['log_dir']."/$zone.log";
+		$message = sprintf("%s\t%s\n", date('Y-m-d H:i:s'), $message);
+		error_log($message, 3, $log_file);
 		return;
 	}
 	public function error($message='Internal Error.') {
