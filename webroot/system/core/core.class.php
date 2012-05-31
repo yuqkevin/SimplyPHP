@@ -22,11 +22,11 @@ Class Core
 	const W3S_SEQ = 'w3s_sequence';
 	const REQUEST_SESSION = 'w3s_request';	// for input cache
 
-	/*** Env variable which can not be re-set in the same session
-	 *	mix	env(string $name[, mix $val[, bool $session]])
+	/*** mix env(string $name[, mix $val[, bool $session]])
+	 *	@description:	Application Env Variable getter/setter. The variable has type of Reserved/Global/Session
 	 *	@input	string $name	variable name
 	 *			string $val		value for setter
-	 *			bool   $session	scope control for customer variable: false if in global, true if in session
+	 *			bool   $session	scope control for customer variable: true if in session only, otherwise check by order:Reserved/Global/Session
 	 *	@return	mix	returns value for given name
 	 ***/
 	public function env($name, $val=null, $session=false)
