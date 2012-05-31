@@ -10,6 +10,8 @@
 // -------------------------------------------------------------------------------+
 // | Checkout: 2011.01.19                                                         |
 // -------------------------------------------------------------------------------+
+// | PHP 5: >=5.2.1                                                               |
+// -------------------------------------------------------------------------------+
 //
 Class Core
 {
@@ -174,9 +176,9 @@ Class Core
 				}
 				return apc_fetch($name);
 			default: // local file 
-				$pool = isset($this->conf['cache']['local'])&&$this->conf['cache']['local']?$this->conf['cache']['local']:'/tmp/cache';
-				$file_name = bin2hex($name);
-				$div = $pool.'/'.strlen($name)%10;	// sub folder 0~9
+				$pool = isset($this->conf['cache']['local'])&&$this->conf['cache']['local']?$this->conf['cache']['local']:(sys_get_temp_dir().'/cache');
+				$file_name = preg_match("/^\w{32}$/", $name)?$name:md5($name);
+				$div = $pool.'/'.$this->env('DOMAIN').'/'.$name[0];	// sub folder
 				if (!is_dir($div)) {
 					if (!mkdir($div, 0700, true)) $this->error("Failed to create cache pool $div. Please check your cache setting in configure file.");
 				}

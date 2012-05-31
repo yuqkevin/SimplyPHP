@@ -19,12 +19,9 @@
 
 class Model extends Web
 {
-	public $dsn = null;
-	public $schema = null;
-	public $tables = null;
-	public $runtime = null;
 	public $stream = array();
-	protected $operator = null;	// current user
+
+	protected $dependencies = array();	// libraries the model denpends on
 	const HOOK_MODEL = 'model';
 //	const TAG_LIBRARY = 'library';
 //	const TAG_MODEL = 'model';
@@ -42,7 +39,7 @@ class Model extends Web
 	}
 	public function boot()
 	{
-		return $this->handler();
+		return $this->switch_to();
 	}
 	protected function initial(){}	// reserved for customization
 	/** Handler Locator **/
@@ -83,14 +80,31 @@ class Model extends Web
 		return $operator;
 	}
 	/** Component Instance via URL: Switch to url on server side **/
-	protected function switch_to($url, $param=null, $output=true)
+	protected function switch_to($url=null, $param=null, $output=true)
 	{
 		$stream_orig = $this->stream;
-		if (!$this->stream=$this->mapping($url)) $this->page_not_found($url);
+		if ($url) {
+			if (!$this->stream=$this->mapping($url)) $this->page_not_found($url);
+		}
 		$this->stream['conf'] = $param;
-			
-		$this->handler();
-		$content = $this->load_view($this->stream['view'], $this->stream['data'], $this->stream['suffix']);
+		// caching controle
+		// disable component cache first, then enable in handler if needed.
+		// to enable component cache, set $this->stream['cache'] with ttl in seconds. 0 for permanent caching
+		$this->stream['cache'] = false;
+		$handler_id = $this->env('DOMAIN').serialize($this->stream).serialize($_REQUEST);
+		$this->stream['cache_handler'] = strlen($handler_id).bin2hex(md5($handler_id));
+		// check cacke first
+		$content = $this->cache($this->stream['cache_handler']);
+		if ($content===false) {
+			// no caching or expired
+			$this->handler();
+			$content = $this->load_view($this->stream['view'], $this->stream['data'], $this->stream['suffix']);
+			// check cache contol
+			if ($this->stream['cache']!==false) {
+				// cache content
+				$this->cache($this->stream['cache_handler'], $content, intval($this->stream['cache']));
+			}
+		}
 		$format = $this->stream['format'];
 		//if ($format=='html') $content = "<div class=\"w3s-component\" id=\"_w3s_component".$this->sequence(1)."\">$content</div>";
 		$this->stream = $stream_orig;
@@ -150,6 +164,7 @@ class Library extends Core
 	protected $conf = null;
 	protected $tbl_ini = 'db';
 	protected $operator = null;	// current user
+	protected $dependencies = array();	// libraries the model denpends on
     protected function __construct($conf=null)
 	{
 		$this->conf = $conf;
