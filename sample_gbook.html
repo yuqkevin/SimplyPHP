@@ -112,6 +112,31 @@ class LibSampleGbook extends LibSample
     }
 }
 </pre>
+			<p>Or if you are used to Active Record pattern, you can re-write post() as following as well:</p>
+<pre>
+    function post($act, $id, $param=null)
+    {
+        if (!$id&&$act!='create') {
+            $this->error("No message given for operating.");
+            return false;
+        }
+		// instantiate record with given id or empty record
+		$record =  $id?$this->tbl->gbook->load($id):?$this->tbl->gbook->new_record($param);
+        switch ($act) {
+            case 'read':
+                return $record->attr();
+                break;
+            case 'create':
+            case 'update':
+                return $record->save()
+                break;
+            case 'delete':
+                return $record->remove();
+                break;
+        }
+        return false;
+    }
+</pre>
 			</li>
 			<li><strong>Component: User Interface Design & Implementation</strong>
 				<p>Component definitions</p>
