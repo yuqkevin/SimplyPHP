@@ -70,12 +70,13 @@ class Dao
 	{
 		if (!$this->dbh) $this->connect();
         $table_name = $table_def['name'];
+		$prefix = strtolower(@$table_def['prefix']);
 		if (isset($table_def['schema'])) $table_name = $table_def['schema'].".$table_name";
 		$sth = $this->dbh->prepare("select $fields from $table_name where {$table_def['pkey']}=?");
         $sth->execute(array($id));
         $row = $sth->fetch(PDO::FETCH_ASSOC);
         $sth->closeCursor();
-        return $row;
+        return $this->prefix($row, $prefix, 'off');
 	}
 	public function table_update($table_def, $id, $param)
 	{
@@ -83,6 +84,8 @@ class Dao
 		if (!$this->dbh) $this->connect();
         $table_name = $table_def['name'];
 		if (isset($table_def['schema'])) $table_name = $table_def['schema'].".$table_name";
+		$prefix = strtolower(@$table_def['prefix']);
+		$param = $this->prefix($param, $prefix, 'on');
 
 		list($set_str, $binding) = $this->param_scan($param, 'set');
 		$query = "update $table_name set $set_str where ";
@@ -109,8 +112,10 @@ class Dao
 		if (!$this->dbh) $this->connect();
         $table_name = $table_def['name'];
 		if (isset($table_def['schema'])) $table_name = $table_def['schema'].".$table_name";
+		$prefix = strtolower(@$table_def['prefix']);
 		$query = "delete from $table_name where ";
 		if (is_array($id)) {
+			$id = $this->prefix($id, $prefix, 'on');
 			list($filter_str, $binding) = $this->param_scan($id, 'filter');
 			$query .= $filter_str;
 		} else {
@@ -131,8 +136,10 @@ class Dao
 	{
 		if (!$this->dbh) $this->connect();
         $table_name = $table_def['name'];
+		$prefix = strtolower(@$table_def['prefix']);
 		if (isset($table_def['schema'])) $table_name = $table_def['schema'].".$table_name";
 		$pkey = $table_def['pkey'];
+		$param = $this->prefix($param, $prefix, 'on');
         if (!isset($param[$pkey])||!$param[$pkey]) {
 			if ($seq=@$table_def['seq']) {
 				if (isset($table_def['schema'])) $seq = $table_def['schema'].".$seq";
@@ -169,10 +176,11 @@ class Dao
 		if (!$this->dbh) $this->connect();
         $table_name = $table_def['name'];
 		if (isset($table_def['schema'])) $table_name = $table_def['schema'].".$table_name";
+		$prefix = strtolower(@$table_def['prefix']);
 		$binding = array();
-
         $query = "select $fields from $table_name";
         if ($filter) {
+			$filter = $this->prefix($filter, $prefix, 'on');
 			list($filter_str, $binding) = $this->param_scan($filter, 'filter');
             $query .= " where $filter_str";
         }
@@ -199,7 +207,7 @@ class Dao
 			$sth->fetch(PDO::FETCH_ASSOC,PDO::FETCH_ORI_REL, $offset-1);
 		}
         while ($r=$sth->fetch(PDO::FETCH_ASSOC)) {
-			$lines[] = $r;
+			$lines[] = $this->prefix($r, $prefix, 'off');
 			if (isset($limit)&&++$cnt>=$limit) {
 				$sth->closeCursor();
 				break;
@@ -215,15 +223,17 @@ class Dao
 		if (!$this->dbh) $this->connect();
         $table_name = $table_def['name'];
 		if (isset($table_def['schema'])) $table_name = $table_def['schema'].".$table_name";
+		$prefix = strtolower(@$table_def['prefix']);
         $field_id = $table_def['pkey'];
         $field_parent = $table_def['parent'];
         $field_weight = $table_def['weight'];
-		if (is_array($filter)) {
-			$filter[$field_parent] = $root;
+		$pfilter = $this->prefix($filter, $prefix, 'on');
+		if (is_array($pfilter)) {
+			$pfilter[$field_parent] = $root;
 		} else {
-			$filter = array($field_parent=>$root);
+			$pfilter = array($field_parent=>$root);
 		}
-		list($filter_str, $binding) = $this->param_scan($filter, 'filter');
+		list($filter_str, $binding) = $this->param_scan($pfilter, 'filter');
 		$sth = $this->dbh->prepare("select $fields,$level as LEVEL from $table_name where $filter_str order by $field_weight desc");
 		if (!$sth) {
 			return $this->error_handle($this->dbh->errorInfo());
@@ -237,13 +247,14 @@ class Dao
         $lines = array();
         if (isset($deep)) $deep--;
         while ($node=$sth->fetch(PDO::FETCH_ASSOC)) {
-            $lines[] = $node;
+            $lines[] = $this->prefix($node, $prefix, 'off');
             if (!isset($deep)||$deep>0) {
                 $lines = array_merge($lines, $this->table_tree($table_def, $node[$field_id], $deep, $fields, $filter, $level+1));
             }
         }
         return $lines;
     }
+	/*** execute a query with question mark place holders and returns number of affected rows ***/
 	public function query($query, $param=null)
 	{
 		if (!$this->dbh) $this->connect();
@@ -258,6 +269,27 @@ class Dao
 			$sth->closeCursor();
 		}
 		return $ok;
+	}
+	/*** prepare query for row by row reading, used with fetch() togather, usually for large number rows reading ***/
+	public function prepare($query, $param=null)
+	{
+        if (!$this->dbh) $this->connect();
+        $sth = $this->dbh->prepare($query);
+        if (!$sth) {
+            return $this->error_handle($this->dbh->errorInfo());
+            return false;
+        }
+        $ok = $sth->execute($param);
+        if ($ok===false) {
+            $this->error_handle($sth->errorInfo());
+            $sth->closeCursor();
+        }
+		return $sth;
+	}
+	/*** fetch one row by given PDOstatement object ***/
+	public function fetch($sth)
+	{
+		return $sth->fetch();
 	}
 	public function procedure($query, $param)
 	{
@@ -298,12 +330,13 @@ class Dao
 	***/
 	public function error_handle($err=null)
 	{
-		if ($err) $this->error = $err;
+		$errlog = isset($this->dsn['errlog'])&&$this->dsn['errlog']?$this->dsn['errlog']:"/var/tmp/db-error.log";
+		if ($err) {
+			$this->error = $err;
+			$err_msg = sprintf("%s\t%s\t%s\n%s\n", date('Y-m-d H:i:s'), $_SERVER['REMOTE_ADDR'], is_array($err)?serialize($err):$err, print_r(debug_backtrace(), true));
+			error_log($err_msg, 3, $errlog);
+		}
 		if ($this->error&&!$this->transaction) {
-			if (defined('DEBUG')&&DEBUG) {
-				print_r($this->error);
-				debug_print_backtrace();
-			}
 			exit("Sorry, we can not process your request at this moment. Please try again later.");
 		} elseif ($this->error) {
 			$this->transaction *= 2; // set error if in transaction
@@ -314,6 +347,9 @@ class Dao
 
     public function load_table($table_def)
     {
+		$prefix = strtolower(@$table_def['prefix']);
+		if (substr($prefix, -1)!=='_') $prefix .= '_';
+		if (isset($table_def['pkey'])&&strpos($table_def['pkey'], $prefix)===0) $table_def['key']=substr($table_def['pkey'], strlen($prefix));
         return  new TableObject($table_def, $this);
     }
 
@@ -421,6 +457,25 @@ class Dao
 		$jointer = $type=='set'?',':' and ';
 		return array(join($jointer, $pair), $binding);
     }
+	public function prefix($fields, $prefix, $onoff)
+	{
+		if (!$prefix||!is_array($fields)) return $fields;
+		if (substr($prefix, -1)==='_') $prefix = substr($prefix,0, -1);
+		$hash = array();
+		foreach ($fields as $key=>$val) {
+			if (is_array($val)&&$key[0]==':') {  // special operator like '::or::'
+				$hash[$key] = $this->prefix($val, $prefix, $onoff);
+				continue;
+			}
+			if ($onoff==='on') {
+				$key = $prefix.'_'.$key;
+			} elseif ($onoff==='off'&&strpos($key, $prefix)===0) {
+				$key = substr($key, strlen($prefix)+1);
+			}
+			$hash[$key] = $val;
+		}
+		return $hash;
+	}
 }
 
 /*** Table Object ***
@@ -447,25 +502,15 @@ Class TableObject
 		$info = null;
 		if ($id) {
 			$info = $this->db->table_read($this->table, $id);
-			$info = $this->prefix($info, 'off');
 		}
 		return $info;
 	}
 	public function search($filter, $suffix=null, $fields='*', $offset=0, $limit=null)
 	{
-		$filter = $this->prefix($filter, 'on');
-		if ($lines=$this->db->table_search($this->table, $filter, $suffix, $fields, $offset, $limit)) {
-			if (is_array($lines)) {
-				if (@$this->table['prefix']) {
-					for ($i=0; $i<count($lines); $i++) $lines[$i] = $this->prefix($lines[$i],'off');
-				}
-			}
-		}
-		return $lines;
+		return $this->db->table_search($this->table, $filter, $suffix, $fields, $offset, $limit);
 	}
 	public function count($filter)
 	{
-		$filter = $this->prefix($filter, 'on');
 		$fields = 'count(*) as cnt';
 		$r = $this->db->table_search($this->table, $filter, null, $fields);
 		return intval(@$r[0]['cnt']);
@@ -473,17 +518,10 @@ Class TableObject
 	public function tree($root, $deep=null, $fields='*', $filter=null)
 	{
 		if (!(isset($this->table['parent'])&&isset($this->table['weight']))) return null;
-		if (is_array($filter)) $filter = $this->prefix($filter, 'on');
-		if ($lines=$this->db->table_tree($this->table, $root, $deep, $fields, $filter)) {
-			if (@$this->table['prefix']) {
-				for ($i=0; $i<count($lines); $i++) $lines[$i] = $this->prefix($lines[$i],'off');
-			}
-		}
-		return $lines;
+		return $this->db->table_tree($this->table, $root, $deep, $fields, $filter);
 	}
 	public function create($param)
 	{
-		$param = $this->prefix($param, 'on');
 		return is_array($param)&&count(array_keys($param))?$this->db->table_insert($this->table, $param):null;
 	}
 	public function truncate()
@@ -492,34 +530,56 @@ Class TableObject
 	}
 	public function delete($id)
 	{
-		if (is_array($id)) {
-			$id = $this->prefix($id, 'on');
-		}
 		return $id?$this->db->table_delete($this->table, $id):null;
 	}
 	public function update($id, $param)
 	{
-		$param = $this->prefix($param, 'on');
 		return $id?$this->db->table_update($this->table, $id, $param):null;
 	}
-	public function prefix($in, $onoff)
+	/*** Instance An Active Record with given record ***/
+	public function load($id)
+    {
+        $row = $this->db->table_read($this->table, $id);
+		return new ActivRecord($this, $row);
+    }
+	/*** Instance An Active Record with empty record ***/
+    public function new_record()
+    {
+		return  new ActivRecord($this);
+    }
+
+}
+
+/*** Active Record ***
+ *	Implement Object Relational Mapping (ORM)
+***/
+Class ActivRecord
+{
+	private $tbl_obj = null;
+	private $attr = array();
+	public function __construct($tbl_obj, $attr=null)
 	{
-		$prefix = strtolower(@$this->table['prefix']);
-		if (!$prefix||!$in) return $in;
-		if (substr($prefix, -1)==='_') $prefix = substr($prefix,0, -1);
-		$hash = array();
-		foreach ((array)$in as $key=>$val) {
-			if (is_array($val)&&$key[0]==':') {  // special operator like '::or::'
-				$hash[$key] = $this->prefix($val, $onoff);
-				continue;
-			}
-			if ($onoff==='on') {
-				$key = $prefix.'_'.$key;
-			} elseif ($onoff==='off'&&strpos($key, $prefix)===0) {
-				$key = substr($key, strlen($prefix)+1);
-			}
-			$hash[$key] = $val;
+		$this->tbl_obj = $tbl_obj;
+		$this->attr = $attr;
+	}
+	/*** attr getter/setter ***/
+	public function attr($name, $val=null)
+	{
+		if (isset($val)) {
+			$this->attr[$name] = $val;
+			return $this; // return self, so setter can be chained
 		}
-		return $hash;
+		return isset($this->attr[$name])?$this->attr[$name]:null;
+	}
+	public function save()
+	{
+		$primary = @$this->attrr[$this->tbl_obj->table['key']];
+		unset($this->attrr[$this->tbl_obj->table['key']]);
+		return $primary?$this->tbl_obj->update($primary, $this->attr):$this->tbl_obj->create($this->attr);
+	}
+	public function remove()
+	{
+		$primary = @$this->attrr[$this->tbl_obj->table['key']];
+		return $primary?$this->tbl_obj->delete($primary):false;
 	}
 }
