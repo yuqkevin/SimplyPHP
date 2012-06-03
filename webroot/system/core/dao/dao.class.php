@@ -543,9 +543,9 @@ Class TableObject
 		return new ActivRecord($this, $row);
     }
 	/*** Instance An Active Record with empty record ***/
-    public function new_record()
+    public function new_record($param=null)
     {
-		return  new ActivRecord($this);
+		return  new ActivRecord($this, $param);
     }
 
 }
@@ -557,15 +557,16 @@ Class ActivRecord
 {
 	private $tbl_obj = null;
 	private $attr = array();
-	public function __construct($tbl_obj, $attr=null)
+	public function __construct($tbl_obj, $attr)
 	{
 		$this->tbl_obj = $tbl_obj;
 		$this->attr = $attr;
 	}
 	/*** attr getter/setter ***/
-	public function attr($name, $val=null)
+	public function attr($name=null, $val=null)
 	{
-		if (isset($val)) {
+		if (!isset($name)) return $this->attr; // get whole record
+		if ($name&&isset($val)) {
 			$this->attr[$name] = $val;
 			return $this; // return self, so setter can be chained
 		}
