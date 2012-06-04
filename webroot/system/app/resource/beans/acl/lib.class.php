@@ -13,7 +13,7 @@ class LibAcl extends Library
 		$this->session(self::SESSION_HOOK, $session);
 		return $val?$val:true;
 	}
-	public function session_cookie($act, $val=null)
+	public function user_session($act, $val=null)
 	{
 		switch ($act) {
 			case 'new':
@@ -23,7 +23,7 @@ class LibAcl extends Library
 					'user'=>$val['id'],
 					'action'=>'0'
 				);
-				$this->session_cookie('close');
+				$this->user_session('close');
 				$this->tbl->session->create($data);
 				$val['timestamp'] = time();
 				$val['data'] = array('url'=>array($this->env('PATH')));

@@ -83,7 +83,7 @@ class LibAclUser extends LibAcl
 						return false;
 					}
 				}
-				return $this->session_cookie('new', $user);
+				return $this->user_session('new', $user);
 			}
 			$this->status['error_code'] = 'LOGIN_PASS_NOT_MATCH';
 			$this->status['error'] = "Login ID and password does not match.";
@@ -99,13 +99,13 @@ class LibAclUser extends LibAcl
 	function sign_out()
 	{
 		$this->session_hook('clear');
-		return $this->session_cookie('close');
+		return $this->user_session('close');
 	}
 
 	/*** user information setter/getter ***/
 	function info($user=null)
 	{
-		return  $user?$this->session_cookie('set', $user):$this->session_cookie('get');
+		return  $user?$this->user_session('set', $user):$this->user_session('get');
 	}
 
 	/*** mix session_verify([int $lifetime[, string $login[, string $pass[, bool $cross_domain]]]])
@@ -113,7 +113,7 @@ class LibAclUser extends LibAcl
 	***/
 	function session_verify($lifetime=0, $login=null, $pass=null, $cross_domain=false)
 	{
-        if (!$operator=$this->session_cookie('verify', $lifetime)) {
+        if (!$operator=$this->user_session('verify', $lifetime)) {
 			if ($login&&$pass) {
 				if ($operator=$this->sign_in($login, $pass, $cross_domain)) return $operator;
 			} elseif (!$this->tbl->account->read(self::DNA_SYS)) {
@@ -234,7 +234,7 @@ class LibAclUser extends LibAcl
 	***/
 	function disable($userid, $comments=null)
 	{
-		$session = $this->session_cookie('get');
+		$session = $this->user_session('get');
 		$comments .= sprintf("\n done by %s at %s", $session['login'], date('Y-m-d H:i'));
 		return (bool) $this->tbl->account->update($userid, array('group'=>0, 'comments'=>$comments));
 	}
