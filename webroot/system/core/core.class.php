@@ -310,6 +310,7 @@ Class Core
 		self::logging($content, $zone);
 		return;
 	}
+	/*** logging message for debug ***/
 	public function logging($message, $zone='debug')
 	{
 		$log_file = $this->conf['global']['log_dir']."/$zone.log";
@@ -317,9 +318,18 @@ Class Core
 		error_log($message, 3, $log_file);
 		return;
 	}
-	public function error($message='Internal Error.') {
-        if ($this->conf['global']['DEBUG']) debug_print_backtrace();
-		exit($message);
+	/*** error handler: exit with logging error in details ***/
+	public function error($err=null)
+	{
+        $errlog_dir = isset($this->conf['global']['log_dir'])?$this->conf['global']['log_dir']:"/var/tmp/log";
+		if (!is_dir($errlog_dir)) mkdir($errlog_dir, 0700, true);
+		$errlog = $errlog_dir.'/error.log';
+        if ($err) {
+            $err_msg = sprintf("%s\t%s\t%s\n%s\n", date('Y-m-d H:i:s'), $_SERVER['REMOTE_ADDR'], is_array($err)?serialize($err):$err, print_r(debug_backtrace(), true));
+            error_log($err_msg, 3, $errlog);
+			exit("Sorry, we can not process your request at this moment. Please try again later.");
+        }
+		return;
 	}
 	/** unserialize given string if it is unserialized**/
 	public function unserialize($str)
