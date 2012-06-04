@@ -4,15 +4,28 @@ class LibAcl extends Library
 	const	SESSION_COOKIE = 'acl';	// user authenticate session
 	const	SESSION_HOOK = 'LibAcl::session_user'; // store session which has same lifetime as user authenticated session
 
+	/*** mix session_hook(string $name[,mix $val])
+	 *	@description	Setting/Getting user variables in session other than user_session
+	 *	@input	$name	variable name, 'clear','reset' are reserved for clean session
+	 *			$val	value of variable
+	 *	@return value of variable or true if success, false for failure
+	***/
 	public function session_hook($name, $val=null)
 	{
-		if ($name=='clear'&&!$val) return $this->session(self::SESSION_HOOK, '');
+		if (in_array($name, array('clear','reset'))&&!$val) return $this->session(self::SESSION_HOOK, 'reset');
 		$session = $this->session(self::SESSION_HOOK);
 		if (!isset($val)) return @$session[$name];
 		$session[$name] = $val;
 		$this->session(self::SESSION_HOOK, $session);
 		return $val?$val:true;
 	}
+
+	/*** mix user_session(string $act[, mix $val])
+	 *	@description	Apply action on user session
+	 *	@input	$act	Action name
+	 *			$val	array for session update, int for session lifetime verifying
+	 *	@return	array for session value if success, false for failure
+	***/ 
 	public function user_session($act, $val=null)
 	{
 		switch ($act) {
@@ -51,6 +64,7 @@ class LibAcl extends Library
 					'data'=>serialize($session['data']),
 				);
 				$this->tbl->session->create($data);
+				$this->session_hook('clear'); // wipe out user's other session as well
 				return $this->session(self::SESSION_COOKIE, 'reset');
 				break;
 			case 'refresh': // refresh with given parameters
