@@ -18,6 +18,7 @@ class LibAclUser extends LibAcl
 	const	EMAIL_UNVERIFIED = '0';
 
 	protected $tbl_ini = 'LibAcl:';	// using LibAcl default db.tbl.ini
+	/*** Database initializing ***/
 	function db_initial($passwd)
 	{
         $this->status['error_code'] = 'INITIAL_FAILURE';
@@ -54,6 +55,12 @@ class LibAclUser extends LibAcl
 		}
 		return $this->sign_in('administrator', $passwd);
 	}
+	/*** bool sign_in(string $name, string $pass)
+	 *	@description	Verify user's identification
+	 *	@input	$name	User Login ID (email address in lower cases usually)
+	 *			$pass	User's password in plain text
+	 *	@return	bool	true if pass and start user session and logging user info into session, or false if failure
+	 ****/
 	function sign_in($name, $pass)
 	{
 		$filter = array('login'=>$name);
@@ -86,15 +93,24 @@ class LibAclUser extends LibAcl
 		}
 		return false;
 	}
+	/*** bool sign_out()
+	 *	@description	sign user out and end the member session
+	***/
 	function sign_out()
 	{
 		$this->session_hook('clear');
 		return $this->session_cookie('close');
 	}
-	function info()
+
+	/*** user information setter/getter ***/
+	function info($user=null)
 	{
-		return  $this->session_cookie('get');
+		return  $user?$this->session_cookie('set', $user):$this->session_cookie('get');
 	}
+
+	/*** mix session_verify([int $lifetime[, string $login[, string $pass[, bool $cross_domain]]]])
+	 *	@description	verify user session and returns user info if success, or returns false
+	***/
 	function session_verify($lifetime=0, $login=null, $pass=null, $cross_domain=false)
 	{
         if (!$operator=$this->session_cookie('verify', $lifetime)) {
@@ -115,6 +131,10 @@ class LibAclUser extends LibAcl
 		}
 		return $operator; // pass
 	}
+
+	/*** array search([array $filter[, string $suffix]])
+	 *	@description listing user with specific filter and suffix limitation
+	***/
 	function search($filter=null, $suffix=null)
 	{
 		$operator = $this->info();
@@ -123,13 +143,21 @@ class LibAclUser extends LibAcl
 		$lines= $this->tbl->account->search($filter, $suffix);
 		return $lines;
 	}
+
+	/*** mix account(string $act[, int $id[, array $param]])
+	 *	@description	Applying action on specific user account or create a new account
+	 *	@input	string $act		action name
+	 *			int    $id		user inner number
+	 *			array  $param	user's new properties
+	 *	@return	mix
+	***/
 	function account($act, $id=null, $param=null)
 	{
 		if (!($entry=$this->dna_verify('account', $id))&&!in_array($act,array('check','read'))) return false;
 		$operator = $this->info();
 		switch ($act) {
 			case 'read':
-				return $entry;
+				return $entry?$entry:$this->tbl->account->read($id);
 				break;
 			case 'create':
 				$param['dna'] = $operator['dna'];
@@ -161,6 +189,10 @@ class LibAclUser extends LibAcl
 		}
 		return false;
 	}
+
+	/*** mix group(string $act[, int $id[, array $param]])
+	 *	@description	applying action on specific group
+	***/
 	function group($act, $id=null, $param=null)
 	{
         if (!($entry=$this->dna_verify('group', $id))&&$act!='read') return false;
@@ -185,18 +217,31 @@ class LibAclUser extends LibAcl
         }
         return false;
 	}
+
+	/*** array groups([array $filter[, string $suffix]])
+	 *	@description listing group with specific filter and limit
+	***/
 	function groups($filter=null, $suffix=null)
 	{
 		$operator = $this->info();
 		if (!isset($filter['dna'])&&$operator['dna']!=self::DNA_SYS) $filter['dna'] = $operator['dna'];
 		return $this->tbl->group->search($filter, $suffix);
 	}
+
+	/*** bool disable(int $userid[, string $comments])
+	 *	@description	Disable specific user with comments option
+	 *	@return	true if success or false if failure
+	***/
 	function disable($userid, $comments=null)
 	{
 		$session = $this->session_cookie('get');
 		$comments .= sprintf("\n done by %s at %s", $session['login'], date('Y-m-d H:i'));
-		return $this->tbl->account->update($userid, array('group'=>0, 'comments'=>$comments));
+		return (bool) $this->tbl->account->update($userid, array('group'=>0, 'comments'=>$comments));
 	}
+
+	/*** mix domain(string $act[, int $id[, array $param]])
+	 *	@description	Applying action on specific domain
+	***/
 	function domain($act, $id=null, $param=null)
 	{
         if (!($entry=$this->dna_verify('domain', $id))&&!in_array($act,array('read','locate'))) return false;
