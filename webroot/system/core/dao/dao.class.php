@@ -184,7 +184,7 @@ class Dao
 			list($filter_str, $binding) = $this->param_scan($filter, 'filter');
             $query .= " where $filter_str";
         }
-        $query .= ' '.$suffix;
+        $query .= ' '.$this->suffix($suffix, $prefix);
 		$attr = $offset?array(PDO::ATTR_CURSOR=>PDO::CURSOR_SCROLL):array();
 		$sth = $this->dbh->prepare($query, $attr);
 		if (!$sth) {
@@ -353,12 +353,38 @@ class Dao
         return  new TableObject($table_def, $this);
     }
 
+	/*** Suffix processor:
+	 *	array(
+			'orderby'=>array(key1=>dirction1,key2=>direction2,...),
+			'limit'=>'start lenght'
+		)
+	***/
+	protected function suffix($suffix, $prefix=null)
+	{
+		if (!$suffix||is_string($suffix)) return $suffix;
+		$suffix_str = null;
+		if (isset($suffix['orderby'])&&($orderby=$suffix['orderby'])) {
+			$suffix_str .= "order by ";
+			if (is_array($orderby)) {
+				$orders = array();
+				if ($prefix&&substr($prefix,-1)!=='_') $prefix .= '_';
+				foreach ($orderby as $key=>$dir) $orders[] = "$prefix$key $dir";
+				$orderby = join(",", $orders);
+			}
+			$suffix_str .= $orderby;
+		}
+		if (isset($suffix['limit'])&&($limit=$suffix['limit'])) {
+			$suffix_str .= " limit $limit";
+		}
+		return $suffix_str;
+	}
 	/**
 	$param sample: 
 		array(
 			'manager'=>'Bob',    // manager='Bob'
 			'group'=>array('marketing','sales','calling'), //group in ('marketing','sales','calling')
 			'age::>'=>20,  // age>20   also support operator: >=, <, <=, <>
+			'reg_date::>'=>'func::date_sub(now(),INTERVAL 1 DAY)', // reg_date>date_sub(now(),INTERVAL 1 DAY)
 			'::or::'=>array('level'=>3,'age'=>40), // (level=3 or age=40)
             'level::not in'=>array(3,5),  // level not in (3,5)
             'dep::like'=>array('%tsd%','5dd%'),  // (dep like '%tsd%' or dep like '5dd%')
@@ -410,9 +436,14 @@ class Dao
 						}
 						$pair[] = '('.join(' or ', $pr). ')';
 					}
-				} elseif ($type==='filter'&&in_array($op, array('>','>=','<','<=','<>'))) {
-					$pair[] = "$field $op ?";
-					$binding[] = $val;
+				} elseif ($type==='filter'&&in_array($op, array('>','>=','<','<=','<>','='))) {
+					if (strpos($val, 'func::')===0) {
+						// "reg_date::>"=>"func::date_sub(now(),INTERVAL 1 DAY)"
+						$pair[] = "$field $op ".substr($val,6); // !!! dangerous, on developer's own risk.
+					} else {
+						$pair[] = "$field $op ?";
+						$binding[] = $val;
+					}
 				} elseif ($type==='filter'&&$op=='like') {
 					if (is_array($val)) {
 						$likes = array();
