@@ -185,7 +185,7 @@ class Library extends Core
 	public function trigger($event_name)
 	{
 		$event = $this->get_lib('LibEvent');
-		if (!$event) return $event;
+		if (!$event) return $event; // event bean not installed
 		return $event->trigger($event_name, $this);
 	}
 	/*** mix add_listner(String $event_name[, array $scope=null[, int $notify=0[, String $handler]]])
@@ -201,7 +201,7 @@ class Library extends Core
         $scope = (array) $scope;
         foreach (array('domain','dna','user') as $key) if (!isset($scope[$key])) $scope[$key] = 0;
 		$event = $this->get_lib('LibEvent');
-		if (!$event) return $event; // event not defined
+		if (!$event) return $event; // event bean not installed
 		$class_name = get_class($this);
 		return $event->add_listner($event_name, $class_name, $scope, $notify, $handler);
 	}
