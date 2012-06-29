@@ -177,11 +177,33 @@ class Library extends Core
 		$this->status['lib'] = get_class($this);
 		return isset($key)?@$this->status[$key]:$this->status;
 	}
+	/*** mix trigger(String $event_name)
+	 *	@description trigger an pre-defined event
+	 *	@input	String $event_name	Event Name
+	 *	@return int number of listners on the event
+	***/
 	public function trigger($event_name)
 	{
 		$event = $this->get_lib('LibEvent');
 		if (!$event) return $event;
 		return $event->trigger($event_name, $this);
+	}
+	/*** mix add_listner(String $event_name[, array $scope=null[, int $notify=0[, String $handler]]])
+	 *	@description	Add a listner to the event.
+	 *	@input	String $event_name	Event Name
+	 *			array $scope	Effective Scope
+	 *			int $notify		Notice type
+	 *			String $handler Callback handler
+	 *	@return see LibEvent::add_listner()
+	***/
+	public function add_listner($event_name, $scope=null, $notify=0, $handler=null)
+	{
+        $scope = (array) $scope;
+        foreach (array('domain','dna','user') as $key) if (!isset($scope[$key])) $scope[$key] = 0;
+		$event = $this->get_lib('LibEvent');
+		if (!$event) return $event; // event not defined
+		$class_name = get_class($this);
+		return $event->add_listner($event_name, $class_name, $scope, $notify, $handler);
 	}
 	/** setter/getter current operator **/
 	protected function operator($operator=null)
