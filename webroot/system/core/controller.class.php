@@ -25,10 +25,9 @@ function __autoload($class)
     $file = APP_DIR.'/beans/'.join('/', $path).'/'.$class_file;
     if (file_exists($file)) {
         require_once($file);
-        return true;
-    }
-    throw new Exception("Unable to load $class via file $file.");
-    return false;
+    } else {
+    	exit("Class Loading Error!!! Unable to load $class: file $file.");
+	}
 }
 require_once(dirname(__FILE__).'/core.class.php');
 require_once(dirname(__FILE__).'/bean.class.php');

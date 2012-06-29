@@ -177,6 +177,12 @@ class Library extends Core
 		$this->status['lib'] = get_class($this);
 		return isset($key)?@$this->status[$key]:$this->status;
 	}
+	public function trigger($event_name)
+	{
+		$event = $this->get_lib('LibEvent');
+		if (!$event) return $event;
+		return $event->trigger($event_name, $this);
+	}
 	/** setter/getter current operator **/
 	protected function operator($operator=null)
 	{
@@ -282,14 +288,4 @@ class Library extends Core
         $this->status['error'] = "The table $tbl does not exist.";
         return false;
     }
-	/** Table records counting
-	 * @input
-	 *		string $tbl		table object name
-	 *		array $filter	search filter without prefix in key
-	**/
-	protected function count($tbl, $filter)
-	{
-		if (!is_object($this->tbl->$tbl)) return false;
-		return $this->tbl->$tbl->count($filter);
-	}
 }

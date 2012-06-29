@@ -262,11 +262,11 @@ Class Core
 		if ($ajax) $url .= ($url=='/'?null:'/').$this->conf['global']['ajax_frag'];
 		return $url.'/'.$method;
 	}
-	/** keep class name in format. e.g. uiHtml -> UiHtml **/
+	/** keep class name in correct format. e.g. myClass -> MyClass, and add correct preifx such as Lib if it's given **/
 	public function class_name_format($str, $prefix=null)
 	{
         $path = preg_split("/\//", strtolower(preg_replace("/([a-z0-9])([A-Z])/", "\\1/\\2", $str)));
-        if (isset($prefix) && $path[0]!==$prefix) array_unshift($path, $prefix);
+        if (isset($prefix) && $path[0]!==$prefix) array_unshift($path, ucfirst($prefix));
         return str_replace(' ','', ucwords(join(' ', $path)));
 	}
     public function date_format($in, $format=null)
@@ -407,11 +407,21 @@ Class Core
 		$offset_local = date_offset_get(new DateTime);
 		$utc = gmdate(strtotime($datetime)+floor($from_tz/100)*3600+($from_tz%100)*60);
 	}
+	/*** mix get_lib(String $lib_full_name[, bool $load_on_fly=true])
+	 *	@description get or load given library
+	 *	@input	String $lib_full_name	Formated library class name in camelcase
+	 *			bool $load_on_fly		false: only get from pre-loaded library listing, true:load if not preloaded.
+	 *	@return	object if load successfully, 
+	 *			null: if load_on_fly is false and lib does not pre-loaded.
+	 *			false: load_on_fly is true but lib file does not exist.
+	***/
 	public function get_lib($lib_full_name, $load_on_fly=true)
 	{
         $libraries = $this->global_store(self::HOOK_LIB);
         if (isset($libraries[$lib_full_name])) return $libraries[$lib_full_name];
-		return $load_on_fly?$this->load_lib($lib_full_name):null;
+		if (!$load_on_fly) return null;
+		$lib_file = $this->bean_file($lib_full_name);
+		return file_exists($lib_file)?$this->load_lib($lib_full_name):false;
 	}
 	/*** get user info from particular access control library, default library is LibAclUser ***/
 	public function get_operator($acl_lib='LibAclUser')
