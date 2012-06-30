@@ -43,7 +43,7 @@
 		<ul>
 			<li>All class names both in Model and Library are case-sensitive and in Upper Camel Case style. e.g MyModelClass</li>
 			<li>All library classes named with prefix "<strong>Lib</strong>", <br /><em>e.g. LibAcl, LibAclUser, LibSampleGbook, LibSampleBlogger, ..., etc.</em></li>
-			<li>All model classes named with prefix "<strong>Mo</strong>", <br /><em>e.g. MoAclUser, MoSampleBlogger, ..., etc</em></li>
+			<li>All model classes named with prefix "<strong>Mo</strong>", but in URL, the prefix "Mo" is omitted. <br /><em>e.g. class name: MoAclUser, MoSampleBlogger, ..., etc, the corresponding name in URL should be AclUser, SampleBlogger,...,etc</em></li>
 			<li>The class name reflects hirarchy of file system under the bean structure.<br />
 				The first word (drop-off Lib prefix for library class) identify the bean folder (in lower case), and the followed words are sub-bean folder names (in lower case).<br />
 				   <em>For example: SampleBlogger (LibSampleBlogger) is model (library) for sub-bean <strong>blogger</strong> under bean <strong>sample</strong>.<br />
