@@ -1,4 +1,4 @@
 <?php
-class AclUser extends Model
+class MoAclUser extends Model
 {
 }

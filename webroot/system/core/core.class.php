@@ -15,8 +15,11 @@
 //
 Class Core
 {
+	protected $status = array('class'=>null,'error'=>null,'error_code'=>null); // for cross-class info trnasfer
 	protected $conf = null;
 	protected $dependencies = null;  // array(LibClassName=>name)  invoke: this->lib->name
+	const PREFIX_MODEL = 'Mo';	// user model prefix
+	const PREFIX_LIB = 'Lib';	// user library prefix
 	const HOOK_LIB = 'library';
 	const HOOK_DB = 'database';
 	const HOOK_VAR = 'w3s_var';
@@ -232,7 +235,7 @@ Class Core
 		// dependency checking
 		// $zone = get_class($this);
 		// if (!in_array($class_name, array_keys($this->dependencies))) $this->error("Error! the class $class_name is not defined in dependency array of $zone.");
-		if (!$name) $name = substr($class_name, 3); //remove 'lib' header
+		if (!$name) $name = substr($class_name, strlen(self::PREFIX_LIB)); //remove prefix header
 		$libraries = $this->global_store(self::HOOK_LIB);
 		$lib = null;
 		if (isset($libraries[$class_name])) {
@@ -257,14 +260,27 @@ Class Core
 	/*** mapping component to url  **/
 	public function component_url($model_name, $method, $ajax=true)
 	{
-		$model_name = ucfirst($model_name); // force to class name format
-		$url = isset($this->conf['route'][$model_name])?$this->conf['route'][$model_name]:('/'.$model_name);
+		$class_name = $this->model_name($model_name, true); // force to class name format
+		$path_name = $this->model_name($model_name, false);
+		$url = isset($this->conf['route'][$class_name])?$this->conf['route'][$class_name]:('/'.$path_name);
 		if ($ajax) $url .= ($url=='/'?null:'/').$this->conf['global']['ajax_frag'];
 		return $url.'/'.$method;
+	}
+	/*** String model_name(String $model_name[, bool $class=true])
+	 *	@description	Generating standard class name or url path portion based on given model name
+	 *	@input	String $model_name		model name
+	 *			bool $class				ture for full standard class name, false for url portion
+	 *	@return	String	Standard class name or url path portion
+	***/
+	public function model_name($model_name, $class=true)
+	{
+		$name = $this->class_name_format($model_name, self::PREFIX_MODEL);
+		return $class?$name:substr($name, strlen(self::PREFIX_MODEL));
 	}
 	/** keep class name in correct format. e.g. myClass -> MyClass, and add correct preifx such as Lib if it's given **/
 	public function class_name_format($str, $prefix=null)
 	{
+		$prefix = strtolower($prefix);
         $path = preg_split("/\//", strtolower(preg_replace("/([a-z0-9])([A-Z])/", "\\1/\\2", $str)));
         if (isset($prefix) && $path[0]!==$prefix) array_unshift($path, ucfirst($prefix));
         return str_replace(' ','', ucwords(join(' ', $path)));
@@ -324,8 +340,13 @@ Class Core
         $errlog_dir = isset($this->conf['global']['log_dir'])?$this->conf['global']['log_dir']:"/var/tmp/log";
 		if (!is_dir($errlog_dir)) mkdir($errlog_dir, 0700, true);
 		$errlog = $errlog_dir.'/error.log';
+		$err_msg = null;
         if ($err) {
             $err_msg = sprintf("%s\t%s\t%s\n%s\n", date('Y-m-d H:i:s'), $_SERVER['REMOTE_ADDR'], is_array($err)?serialize($err):$err, print_r(debug_backtrace(), true));
+		} elseif ($this->status['error']) {
+			$err_msg = $this->status['error'];
+		}
+		if ($err_msg) {
             error_log($err_msg, 3, $errlog);
 			exit("Sorry, we can not process your request at this moment. Please try again later.");
         }
@@ -454,13 +475,20 @@ Class Core
 	***/
 	protected function bean_file($class_name, $active=true)
 	{
-	    $path = preg_split("/\//", strtolower(preg_replace("/([a-z0-9])([A-Z])/", "\\1/\\2", $this->class_name_format($class_name))));
-	    if ($path[0]==='lib') {
+	    $path = preg_split("/\//", strtolower(preg_replace("/([a-z0-9])([A-Z])/", "\\1/\\2", ucfirst($class_name))));
+		$path[0] = ucfirst($path[0]);
+	    if ($path[0]===self::PREFIX_LIB) {
         	$class_file = 'lib.class.php';
 	        array_shift($path);
-    	} else {
+    	} elseif ($path[0]===self::PREFIX_MODEL) {
         	$class_file = 'model.class.php';
-    	}
+	        array_shift($path);
+    	} else {
+			// invalid class name
+			$this->status['error_code'] = 'INVALID_CLASSNAME';
+			$this->status['error'] = 'Invalid class name';
+			return false;
+		}
     	return APP_DIR.'/'.($active?'beans':'resource/beans').'/'.join('/', $path).'/'.$class_file;
 	}
     /*** Simple Xor encrypt/decrypt***
@@ -563,7 +591,7 @@ class Web extends Core
 		$stream = array(
 			'offset'=>null,		// matched value of pre-configure model = offset pair, it must be /somthing or null
 			'url'=>$url,		// url without offset
-			'model'=>null,
+			'model'=>null,		// model formal name: e.g. MoMyModel
 			'method'=>null,
 			'param'=>null,		// linear array, param from url. e.g. /user/login
 			'conf'=>null,		// component conf/initial data in hash. e.g. array('key1'=>val1,'key2'=>val2,...)
@@ -597,8 +625,9 @@ class Web extends Core
 			} elseif ($r[1]==$this->conf['global']['ajax_frag']) {
 				// /model/ajax/method ...
 				$stream['ajax'] = true;
-                $stream['model'] = array_shift($r);
-				$stream['comp_url'] = '/'.$stream['model'].'/'.array_shift($r); // method will be added later
+				$model_path = array_shift($r);
+                $stream['model'] = self::PREFIX_MODEL.$model_path;
+				$stream['comp_url'] = "/$model_path/".array_shift($r); // method will be added later
 			}
 		}
 
@@ -623,10 +652,10 @@ class Web extends Core
                         return null;
                     }
                     // using default model, default method
-                    $r[0] = $default;
+                    $r[0] = substr($default, strlen(self::PREFIX_MODEL));
                 }
                 // url format: /model/method...
-				$stream['model'] = $r[0];
+				$stream['model'] = self::PREFIX_MODEL.$r[0];
 				$stream['comp_url'] = $r[0].'/'.$this->conf['global']['ajax_frag']; // method will be added later
 				array_shift($r);
 			} else {
@@ -638,7 +667,7 @@ class Web extends Core
 		}
 		// verify model
 		if (!$this->model_locator($stream['model'])) {
-			$this->error("Not found model file. {$stream['model']}");
+			$this->error($this->status['error']);
 			return null;
 		}
 		// locate method
@@ -662,8 +691,13 @@ class Web extends Core
 	}
 	public function model_locator($model, $method=null)
 	{
-		$model_file = $this->bean_file($model);
-		if (!file_exists($model_file)) return null;
+		$model_name = $this->model_name($model);
+		$model_file = $this->bean_file($model_name);
+		if (!file_exists($model_file)) {
+			$this->status['error_code'] = 'FILE_DOES_NOT_EXIST';
+			$this->status['error'] = "The model file does not exist: $model_file.";
+			return null;
+		}
 		if (!isset($method)) return $model_file;
 		$method_file = $view_file = null;
 		$suffix_inc = '.inc.php';
@@ -676,7 +710,7 @@ class Web extends Core
 	}
 	public function model_verify($model_name)
 	{
-		$model_name = ucfirst($model_name);	// format model_name
+		$model_name = $this->model_name($model_name);	// format model_name
 		if (in_array($model_name, $this->conf['access']['model'])) return true;
 		if (isset($this->conf['route'][$model_name])) return true;
 		if (isset($this->conf['domain'][$model_name])) {
@@ -807,7 +841,11 @@ EOT;
 		if (ob_get_contents()) ob_flush();
         exit;
     }
-	public function error($message='Internal Error.') {
+	public function error($message=null) {
+		if (!$message) {
+			// status
+			$message = $this->status['error'];
+		}
         if ($this->conf['global']['DEBUG']) debug_print_backtrace();
 		exit($message);
 	}

@@ -2,7 +2,7 @@
 /** Bean: Sample Bean for guest book 
 	Model: SampleGbook
 **/
-class SampleGbook extends Sample
+class MoSampleGbook extends Sample
 {
 	protected $dependencies = array('LibSampleGbook'=>'gbook');
 	protected function post($act, $id, $param=null)

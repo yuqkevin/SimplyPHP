@@ -65,7 +65,7 @@ $body = <<<EOT
  *   Create: $timestamp
  *   Author: $user
 ***/
-class $class_name extends Model
+class Mo$class_name extends Model
 {
 	protected \$dependencies = array();
 }

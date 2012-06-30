@@ -1,4 +1,4 @@
 <?php
-class UiHtml extends Model
+class MoUiHtml extends Model
 {
 }

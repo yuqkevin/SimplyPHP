@@ -1,4 +1,4 @@
 <?php
-class SampleHello extends Model
+class MoSampleHello extends Model
 {
 }

@@ -14,14 +14,17 @@
 function __autoload($class)
 {
     $path = preg_split("/\//", strtolower(preg_replace("/([a-z0-9])([A-Z])/", "\\1/\\2", $class)));
-    if ($path[0]==='lib') {
+	$path[0] = ucfirst($path[0]);
+    if ($path[0]===Core::PREFIX_LIB) {
         $file = null;
         $class_file = 'lib.class.php';
         array_shift($path);
-        //$file = APP_DIR.'/'.join('/', $path).'/'.$class_file;
-    } else {
+    } elseif ($path[0]===Core::PREFIX_MODEL) {
         $class_file = 'model.class.php';
-    }
+        array_shift($path);
+    } else {
+    	exit("Class Loading Error!!! Invalid class name $class.");
+	}
     $file = APP_DIR.'/beans/'.join('/', $path).'/'.$class_file;
     if (file_exists($file)) {
         require_once($file);

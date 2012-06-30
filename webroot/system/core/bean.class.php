@@ -160,7 +160,6 @@ class Model extends Web
 // the class file should be app/library/class1/class2/class3.class.php
 class Library extends Core
 {
-	protected $status = array('lib'=>null,'error'=>null,'error_code'=>null); // for cross-library info trnasfer
 	protected $conf = null;
 	protected $tbl_ini = 'db';
 	protected $operator = null;	// current user
@@ -174,7 +173,7 @@ class Library extends Core
 	public function get_error($key=null)
 	{
 		if (!$this->status['error_code']) return null;
-		$this->status['lib'] = get_class($this);
+		$this->status['class'] = get_class($this);
 		return isset($key)?@$this->status[$key]:$this->status;
 	}
 	/*** mix trigger(String $event_name)

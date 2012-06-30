@@ -1,5 +1,5 @@
 <?php
 /*** Welcome Bean ***/
-class Welcome extends Model
+class MoWelcome extends Model
 {
 }
