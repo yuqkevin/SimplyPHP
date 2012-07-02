@@ -562,7 +562,12 @@ class Web extends Core
 		if (function_exists('date_default_timezone_set')) date_default_timezone_set($conf['global']['TIMEZONE']);
 		if (!isset($conf['global']['ajax_frag'])) $conf['global']['ajax_frag'] = self::COMPONENT_CALL;
 		if (!isset($conf['global']['index'])) $conf['global']['index'] = Core::DEFAULT_ENTRY;
-		if (!isset($conf['route'])) $conf['route'] = array();
+		if (!isset($conf['route'])) {
+			$conf['route'] = array();
+		} else {
+			// overide route table with newer entrances
+			$conf['route'] = array_unique(array_reverse($conf['route']));
+		}
 		if (!isset($conf['domain'])) $conf['domain'] = array();
 		if (!isset($conf['access'])) $conf['access'] = array();
 		//$conf['access']=array_change_key_case($conf['access'],CASE_LOWER);
@@ -581,10 +586,12 @@ class Web extends Core
         if (substr($url, -1)=='/') $url = substr($url, 0, -1);
         return preg_split("|/|", $url);
     }
-	/** URL=>stream **
+	/** mix mapping(string $url[, bool $method_check=false])
+	 *	@description Parsing URL into hash stream: URL=>stream **
 	 *	@input	string $url	url
 	 *			bool $method_check	force to check method file, give error if method file doesn't exist and method_check is set to true
-	 *	@output	array stream
+	 *	@output	array stream for valid url
+	 *			null for unknown url
 	**/
 	public function mapping($url, $method_check=false)
 	{
