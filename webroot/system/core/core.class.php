@@ -673,10 +673,7 @@ class Web extends Core
 			}
 		}
 		// verify model
-		if (!$this->model_locator($stream['model'])) {
-			$this->error($this->status['error']);
-			return null;
-		}
+		if (!$this->model_locator($stream['model'])) return null;	// invliad model
 		// locate method
 		if (!isset($r[0])||!$r[0]) $r[0] = $index; // using default if no method given in url
 		list($stream['model_file'], $stream['method_file'], $stream['view']) = $this->model_locator($stream['model'], $r[0]);
@@ -688,7 +685,8 @@ class Web extends Core
 		$stream['method'] = array_shift($r);
 
 		if ($method_check&&!((bool)$stream['method_file']||(bool)$stream['view'])) {
-			$this->error("Invalid method. {$stream['method']}");
+			$this->status['error_code'] = 'INVALID_METHOD';
+			$this->status['error'] = "Invalid method. {$stream['method']}";
 			return null;
 		}
 		$stream['comp_url'] .= '/'.$stream['method'];

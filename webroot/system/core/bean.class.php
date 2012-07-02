@@ -79,13 +79,12 @@ class Model extends Web
 		}
 		return $operator;
 	}
-	/** Component Instance via URL: Switch to url on server side **/
+	/** Mapping URL to Component **/
 	protected function switch_to($url=null, $param=null, $output=true)
 	{
 		$stream_orig = $this->stream;
-		if ($url) {
-			if (!$this->stream=$this->mapping($url)) $this->page_not_found($url);
-		}
+		if (!$url) $url = $this->stream['url'];
+		if (!$this->stream=$this->mapping($url, true)) $this->page_not_found($url);
 		$this->stream['conf'] = $param;
 		// caching controle
 		// disable component cache first, then enable in handler if needed.
