@@ -17,7 +17,6 @@ class LibAclUser extends LibAcl
 	const	EMAIL_VERIFIED = '1';
 	const	EMAIL_UNVERIFIED = '0';
 
-	protected $tbl_ini = 'LibAcl:';	// using LibAcl default db.tbl.ini
 	/*** Database initializing ***/
 	function db_initial($passwd)
 	{

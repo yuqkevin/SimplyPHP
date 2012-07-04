@@ -27,6 +27,8 @@ Class Core
 	const W3S_SEQ = 'w3s_sequence';
 	const REQUEST_SESSION = 'w3s_request';	// for input cache
 
+	public function __construct(){}
+
 	/*** mix env(string $name[, mix $val[, bool $session]])
 	 *	@description:	Application Env Variable getter/setter. The variable has type of Reserved/Global/Session
 	 *	@input	string $name	variable name
@@ -264,7 +266,7 @@ Class Core
 		$path_name = $this->model_name($model_name, false);
 		$url = isset($this->conf['route'][$class_name])?$this->conf['route'][$class_name]:('/'.$path_name);
 		if ($ajax) $url .= ($url=='/'?null:'/').$this->conf['global']['ajax_frag'];
-		return $url.'/'.$method;
+		return $url.($url=='/'?null:'/').$method;
 	}
 	/*** String model_name(String $model_name[, bool $class=true])
 	 *	@description	Generating standard class name or url path portion based on given model name

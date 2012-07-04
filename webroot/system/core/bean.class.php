@@ -23,16 +23,18 @@ class Model extends Web
 
 	protected $dependencies = array();	// libraries the model denpends on
 	const HOOK_MODEL = 'model';
-//	const TAG_LIBRARY = 'library';
-//	const TAG_MODEL = 'model';
-//	const TAG_HANDLER = 'handler';
+
 	public function __construct($conf, $stream=null)
 	{
+		// merge dependencies defined in parent classes
+		$parent = get_parent_class($this);
+		if (preg_match("/^Mo[A-Z]/", $parent)) {
+			$vars = get_class_vars($parent);
+			$this->dependencies = array_merge((array)$this->dependencies, (array)@$vars['dependencies']);
+		}
+		// then loading dependencies
 		$this->stream = $stream;
 		$this->conf = isset($conf)?$conf:$this->configure();
-		$class = get_class($this);
-		// dsn in configure has higher priority than dsn in model class
-		if (isset($this->conf['dsn'][$class])) $this->dsn=$this->conf['dsn'][$class];
 		// loading libraries
 		$this->load_dependencies();
 		$this->initial();
@@ -160,13 +162,19 @@ class Model extends Web
 class Library extends Core
 {
 	protected $conf = null;
-	protected $tbl_ini = 'db';
 	protected $operator = null;	// current user
 	protected $dependencies = array();	// libraries the model denpends on
-    protected function __construct($conf=null)
+    public function __construct($conf=null)
 	{
+		// merge dependencies defined in parent classes
+		$parent = get_parent_class($this);
+		if (preg_match("/^Lib[A-Z]/", $parent)) {
+			$vars = get_class_vars($parent);
+			$this->dependencies = array_merge((array)$this->dependencies, (array)@$vars['dependencies']);
+		}
+		// then loading database, dependencies
 		$this->conf = $conf;
-		if ($dsn=$this->dsn_parse($this->tbl_ini)) $this->load_db($dsn, $this);
+		if ($dsn=$this->dsn_parse()) $this->load_db($dsn, $this);
 		$this->load_dependencies();
 	}
 	public function get_error($key=null)
@@ -208,9 +216,13 @@ class Library extends Core
 	{
 		return $operator?$this->set_operator($operator): $this->get_operator();
 	}
-	protected function dsn_parse($tbl_ini)
+
+	/*** string dsn_parse()
+	 *	@description	get dsn string in standard format (e.g. default.mysql) based on dsn configure
+	 *	@return		string entry_name.driver_name
+	***/
+	protected function dsn_parse()
 	{
-		if (!$tbl_ini) return null;
 		$class = get_class($this);
 		$folder = preg_replace("/([a-z0-9])([A-Z])/", "\\1/\\2", $class);
 		$dsn = null;
@@ -230,13 +242,12 @@ class Library extends Core
 		if (!$dsn) $dsn = 'default.'.$this->conf['database']['default']['database'];
 		$r = preg_split("/\./", $dsn);
 		if (!isset($r[1])||!$r[1]) $r[1] = $this->conf['database'][$r[0]]['database'];
-		$r[2] = $tbl_ini;
 		return $this->dsn = join('.', $r);
 	}
 	protected function load_db($dsn, $hook)
 	{
 		if (!is_object($hook)) $hook = new stdClass();
-		list($dsn_name, $schema, $tbl_ini) = preg_split("/[\.\/]/", $dsn);
+		list($dsn_name, $schema) = preg_split("/[\.\/]/", $dsn);
 		$s_hook = "$dsn_name.$schema";
         $libraries = $this->global_store(CORE::HOOK_DB);
 		if (isset($libraries['db'][$s_hook])) {
@@ -258,27 +269,22 @@ class Library extends Core
 		} else {
 			$this->error("Error! Invalid DSN: $conf.");
 		}
-		if ($tbl_ini) {
-			if (strpos($tbl_ini, ':')!==false) {
-				$r = preg_split("/:+/", $tbl_ini, 2);
-				$tbl_ini = $r[1]?$r[1]:'db';
-				$folder = dirname($this->bean_file($r[0]));
-			} else {
-				$folder = dirname($this->bean_file(get_class($this)));
-			}
-			$file = $folder."/database/$tbl_ini.tbl.ini";
-			if (file_exists($file)) {
-				$tables = array_change_key_case(parse_ini_file($file, true), CASE_LOWER);
-        	    if (!isset($hook->tbl)) $hook->tbl = new stdClass();
-				foreach ((array)$tables as $table=>$def) {
-					if (!isset($hook->tbl->$table)) {
-                		if (!@$def['schema']) $def['schema'] = $schema;
-	                	$hook->tbl->$table=$hook->db->load_table($def);
-					}
+		// loading table objects defined in current class and parent classes
+		$folder = dirname($this->bean_file(get_class($this)));
+		$ini_files = array();
+		while (strpos($folder, APP_DIR.'/beans/')===0) {
+			$tbl_ini_file = $folder."/database/db.tbl.ini";
+			if (file_exists($tbl_ini_file)) $ini_files[] = $tbl_ini_file;
+			$folder = dirname($folder);
+		}
+		foreach ($ini_files as $ini_file) {
+        	if (!isset($hook->tbl)) $hook->tbl = new stdClass();
+			$tables = array_change_key_case(parse_ini_file($ini_file, true), CASE_LOWER);
+			foreach ((array)$tables as $table=>$def) {
+				if (!isset($hook->tbl->$table)) {
+            		if (!@$def['schema']) $def['schema'] = $schema;
+	            	$hook->tbl->$table=$hook->db->load_table($def);
 				}
-			} elseif ($this->conf['global']['DEBUG']) {
-				$lib = get_class($this);
-				$this->error("Error! Can not locate the DSN: $dsn in library $lib.: $file");
 			}
 		}
 		return $hook;
