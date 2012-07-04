@@ -28,9 +28,10 @@ class Model extends Web
 	{
 		// merge dependencies defined in parent classes
 		$parent = get_parent_class($this);
-		if (preg_match("/^Mo[A-Z]/", $parent)) {
+		while (preg_match("/^Mo[A-Z]/", $parent)) {
 			$vars = get_class_vars($parent);
 			$this->dependencies = array_merge((array)$this->dependencies, (array)@$vars['dependencies']);
+			$parent = get_parent_class($parent);
 		}
 		// then loading dependencies
 		$this->stream = $stream;
@@ -168,9 +169,10 @@ class Library extends Core
 	{
 		// merge dependencies defined in parent classes
 		$parent = get_parent_class($this);
-		if (preg_match("/^Lib[A-Z]/", $parent)) {
+		while (preg_match("/^Lib[A-Z]/", $parent)) {
 			$vars = get_class_vars($parent);
 			$this->dependencies = array_merge((array)$this->dependencies, (array)@$vars['dependencies']);
+			$parent = get_parent_class($parent);
 		}
 		// then loading database, dependencies
 		$this->conf = $conf;
@@ -218,8 +220,8 @@ class Library extends Core
 	}
 
 	/*** string dsn_parse()
-	 *	@description	get dsn string in standard format (e.g. default.mysql) based on dsn configure
-	 *	@return		string entry_name.driver_name
+	 *	@description	get dsn string in standard format (e.g. default.schema) based on dsn configure
+	 *	@return		string entry_name.schema
 	***/
 	protected function dsn_parse()
 	{
@@ -242,10 +244,11 @@ class Library extends Core
 		if (!$dsn) $dsn = 'default.'.$this->conf['database']['default']['database'];
 		$r = preg_split("/\./", $dsn);
 		if (!isset($r[1])||!$r[1]) $r[1] = $this->conf['database'][$r[0]]['database'];
-		return $this->dsn = join('.', $r);
+		return $r[1]?$this->dsn = join('.', $r):null;
 	}
 	protected function load_db($dsn, $hook)
 	{
+		// load db driver first
 		if (!is_object($hook)) $hook = new stdClass();
 		list($dsn_name, $schema) = preg_split("/[\.\/]/", $dsn);
 		$s_hook = "$dsn_name.$schema";
@@ -254,7 +257,7 @@ class Library extends Core
 			$hook->db = $libraries['db'][$s_hook];
 		} elseif (isset($this->conf['database'][$dsn_name])) {
 			$conf = $this->conf['database'][$dsn_name];
-			if (!$conf['dbdriver']) return null;
+			if (!$conf['dbdriver']) return null;	// no driver given
 			$folder = dirname(__FILE__).'/dao';
 			$dbdriver = ucfirst(strtolower($conf['dbdriver']));
 			$driver_file = $folder.strtolower("/$dbdriver.class.php");
@@ -269,7 +272,7 @@ class Library extends Core
 		} else {
 			$this->error("Error! Invalid DSN: $conf.");
 		}
-		// loading table objects defined in current class and parent classes
+		// hook table objects defined in current class and parent classes
 		$folder = dirname($this->bean_file(get_class($this)));
 		$ini_files = array();
 		while (strpos($folder, APP_DIR.'/beans/')===0) {
