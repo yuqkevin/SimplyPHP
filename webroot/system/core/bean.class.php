@@ -23,8 +23,9 @@ class Model extends Web
 
 	protected $dependencies = array();	// libraries the model denpends on
 	const HOOK_MODEL = 'model';
+	const HOOK_LANGUAGE = 'client_language';	// hook in $GLOBALS for language dictionary
 
-	public function __construct($conf, $stream=null)
+	public function __construct($conf)
 	{
 		// merge dependencies defined in parent classes
 		$parent = get_parent_class($this);
@@ -34,27 +35,75 @@ class Model extends Web
 			$parent = get_parent_class($parent);
 		}
 		// then loading dependencies
-		$this->stream = $stream;
 		$this->conf = isset($conf)?$conf:$this->configure();
 		// loading libraries
 		$this->load_dependencies();
 		$this->initial();
 	}
-	public function boot()
+	/*** mix switch_to([string $url=null[, array $attr=null[,bool $output=null]]])
+	 *	@decription		loading corresponding component for given url
+	 *	@input	string	$url	using current url if url is omitted
+	 *			array	$attr	give parameters array('conf'=>array(key1=>val1,...),'param'=>array(v1,v2,...))
+	 *			bool	$output	output control, true for client side output,false for returns string
+	 *	@return	output to client if $output is true, or string if $output is false
+	***/
+	public function switch_to($url=null, $attr=null, $output=true)
 	{
-		return $this->switch_to();
+        if (!$url) $url = $this->env('PATH');
+		// verify URL
+        if (!$stream=$this->mapping($url, true)) {
+            if ($output) $this->page_not_found($url);
+            return "<a title=\"$url\" style=\"color:red;\">".$this->language_tag('UNKNOWN_REQUEST')."</a>";
+        }
+		if (is_array($attr['conf'])) $stream['conf']=array_merge((array)$stream['conf'], $attr['conf']);
+		if (is_array($attr['param'])) $stream['param']=array_merge((array)$stream['param'], $attr['param']);
+		return $this->component($stream, $output);
+	}
+	/*** string load_component(string $model, string $method[, array $conf=null[,bool $output=false]])
+	 *	@description	Loading given component by return content in string
+	 *	@input	$model	model name
+	 *			$metho	method name
+	 *			$conf	attributes: array(key1=>val1,...)
+	 *			bool	$output	output control, true for client side output,false for returns string
+	 *	@return	content of component
+	***/
+	public function load_component($model, $method, $conf=null, $output=false)
+	{
+		// verify component existence
+		if ($stream=$this->component_locator($model, $method)) {
+			$stream['conf'] = $conf;
+			return $this->component($stream, $output);
+		}
+		return $output?$this->page_not_found("$model::$method"):"<a title=\"$model::$method\" style=\"color:red;\">".$this->language_tag('UNKNOWN_COMPONENT')."</a>";
 	}
 	protected function initial(){}	// reserved for customization
 	/** Handler Locator **/
 	protected function handler()
 	{
-		if (!$this->domain_verify($this->stream['model'])) $this->error("Error: trying to access model {$this->stream['model']} in non-authorized domain.");
-		$handler = $this->stream['method_file'].'.inc.php';
-		$this->stream['url'] = isset($this->stream['url'])?$this->stream['url']:$this->request('_PATH');
-		if (file_exists($handler)) {
-			include($handler);
+		if (substr($this->stream['method_file'], -8)!=='.inc.php') $this->stream['method_file'] .= '.inc.php';
+		if (file_exists($this->stream['method_file'])) {
+			include($this->stream['method_file']);
 		}
 		return $this->stream;
+	}
+	/*** string language_tag(string $tag)
+	 *	@description find a translation for given tag in client language
+	 *	@input	$tag	tag name
+	 *	@return	translation of tag
+	***/
+	protected function language_tag($tag)
+	{
+		if (!$language=$this->cookie('language')) $language='en';
+		if (!$dics=$this->global_store(self::HOOK_LANGUAGE)) {
+			$dic_file = APP_DIR.'/conf/languages/'.$language.'.ini';
+			if (file_exists($dic_file)) {
+				$dics = parse_ini_file($dic_file);
+				$this->global_store(self::HOOK_LANGUAGE, $dics);
+			} else {
+				$dics = array();
+			}
+		}
+		return @$dics[$tag];
 	}
 	/*** verify model access via domain setting in configure file ***/
 	private function domain_verify($model)
@@ -63,56 +112,49 @@ class Model extends Web
 		$domains = preg_split("/,/", preg_replace("/\s/", "", strtolower($this->conf['domain'][$model])));
 		return in_array($this->env('DOMAIN'), $domains);
 	}
-	/*** operator_verify([array $conditions])
-	 *	@desc	check operator properties, returns operator info array if all conditions match, otherwise returns false
-	 *	@input	$conditions	associative array, e.g. array('dna'=>1,'group'=>array('domain'=>3))
-	 *	@return	bool false
+	/*** mix component(array $stream[, bool $output=true])
+	 *	@description	instantiating a component by give stream
+	 *	@input	array $stream	component definition with parameters
+	 *			bool  $output	output control, output to client if true, or returns content in string.
+	 *	@return	output to client if true, or returns content in string.
 	***/
-	protected function operator_verify($conditions=null)
+	protected function component($stream, $output=true)
 	{
-		if (!$operator=$this->get_operator()) return false;
-		if (!isset($operator['id'])) return false;
-		if (!$conditions) return $operator;
-		foreach ($conditions as $key=>$val) {
-			if (is_array($val)) {
-				foreach ($val as $k=>$v) if ($operator[$key][$k]!=$v) return false;
-			} elseif ($operator[$key]!=$val) {
-				return false;
-			}
+		$error = $this->language_tag('ACCESS_DENIED');
+        // Verify model visibility by configuration
+        if (!$this->model_verify($stream['model'])) {
+            $message = $error.($this->conf['global']['DEBUG']?('[model:'.$stream['model'].']'):null);
+			if ($output) $this->output($message,'html');
+			return "<a title=\"$message\" style=\"color:red;\">$error</a>";
+        }
+		if (!$this->action_verify($stream['model'], $stream['method'])) {
+            $message = $error.($this->conf['global']['DEBUG']?('[model:'.$stream['model'].'::'.$stream['method'].']'):null);
+			if ($output) $this->output($message,'html');
+			return "<a title=\"$message\" style=\"color:red;\">$error</a>";
 		}
-		return $operator;
+        // set cache flag off first
+        $stream['cache'] = false;
+        $handler_id = $this->env('DOMAIN').serialize($stream).serialize($_REQUEST);
+        $stream['cache_handler'] = strlen($handler_id).bin2hex(md5($handler_id));
+        // check cacke first
+        $content = $this->cache($stream['cache_handler']);
+        if (!$content) {
+            // no caching or expired
+			$app = $this->load_model($stream['model']);
+			$orig_stream = $app->stream;
+			$app->stream = $stream;
+		//	$app = new $stream['model']($this->conf, $stream);
+            $stream = $app->handler();
+            $content = $app->load_view($stream['view_file'], @$stream['data'], @$stream['suffix']);
+            // check cache contol
+            if ($stream['cache']!==false) {
+                // cache content
+                $app->cache($stream['cache_handler'], $content, intval($stream['cache']));
+            }
+			$app->stream = $orig_stream;
+        }
+		return  $output?$app->output($content, @$stream['format']):$content;
 	}
-	/** Mapping URL to Component **/
-	protected function switch_to($url=null, $param=null, $output=true)
-	{
-		$stream_orig = $this->stream;
-		if (!$url) $url = $this->stream['url'];
-		if (!$this->stream=$this->mapping($url, true)) $this->page_not_found($url);
-		$this->stream['conf'] = $param;
-		// caching controle
-		// disable component cache first, then enable in handler if needed.
-		// to enable component cache, set $this->stream['cache'] with ttl in seconds. 0 for permanent caching
-		$this->stream['cache'] = false;
-		$handler_id = $this->env('DOMAIN').serialize($this->stream).serialize($_REQUEST);
-		$this->stream['cache_handler'] = strlen($handler_id).bin2hex(md5($handler_id));
-		// check cacke first
-		$content = $this->cache($this->stream['cache_handler']);
-		if ($content===false) {
-			// no caching or expired
-			$this->handler();
-			$content = $this->load_view($this->stream['view'], $this->stream['data'], $this->stream['suffix']);
-			// check cache contol
-			if ($this->stream['cache']!==false) {
-				// cache content
-				$this->cache($this->stream['cache_handler'], $content, intval($this->stream['cache']));
-			}
-		}
-		$format = $this->stream['format'];
-		//if ($format=='html') $content = "<div class=\"w3s-component\" id=\"_w3s_component".$this->sequence(1)."\">$content</div>";
-		$this->stream = $stream_orig;
-		return $output?$this->output($content, $format):$content;
-	}
-
 	/*** mix component_param(mix $keys)
 	 *	@description get component parameters via http,configure, url
 	 *		Should be called from inside of component (method)
@@ -135,6 +177,19 @@ class Model extends Web
 		}
 		return count($keys)==1?$vals[$keys[0]]:$vals;
 	}
+
+	/*** string token_key([int $length=8[,string $salt=null]])
+	 *	@description generate key for token by given salt (optional), default salt is salt in conf file
+	 *	@input	$int	length of key in character between 4 ~ 32, default is 8 chars
+	 *			$salt	salt for ken generating
+	 *	@return	key in string
+	***/
+	protected function token_key($length=8, $salt=null)
+	{
+		if (!$salt) $salt = $this->conf['global']['salt'];
+		$length = max(4, min(32, $length));
+		return substr(md5($this->session('id')).$salt, 0, $length);
+	}
 	/*** Simple Xor encrypt/decrypt using session id based key, mainly for token***/
 	protected function s_encrypt($plain_text, $key=null)
 	{
@@ -151,9 +206,52 @@ class Model extends Web
 	protected function ajax()
 	{
 		$this->stream['ajax'] = true;
-	    $this->stream['view'] = null;
+	    $this->stream['view_file'] = null;
     	$this->stream['format'] = 'json';
 	    $this->stream['data'] = array('success'=>false,'message'=>null);
+	}
+	/*** array component_list($class_name)
+	 *	@description	get list of component for given model
+	 *	@input	bool $class_name 	model class_name 
+	 *	@return	array 	component array like array(array('model1'=>array('method1'=>'desc','method2'=>'desc',..,),...,'modelN'=>...)
+	***/
+	protected function component_list($class_name)
+	{
+		$bean_root=$root=APP_DIR.'/resource/beans';
+		$root = dirname($this->bean_file($class_name, false));	// the root of given bean
+		if (!file_exists("$root/model.class.php")) return array(); // no model exists.
+		$components = array();
+		$model = $this->class_name_format($class_name);
+		foreach (glob("$root/handler/*.inc.php") as $file) {
+			$method = array_shift(preg_split("/\./", basename($file)));
+			$desc = preg_match("/\*\s+@description\s([^\n]+)/msi", file_get_contents($file), $p)?trim($p[1]):'';
+			$components["$model::$method"] = $desc;
+		}
+		return $components;
+	}
+	protected function bean_list($active=true)
+	{
+        $bean_root = APP_DIR.'/'.($active?'beans':'resource/beans');
+        $bean_folders = $this->_bean_dir_scan($bean_root);
+		$beans = array();
+		foreach ($bean_folders as $bean_folder) {
+			$name = str_replace(' ','', ucwords(join(' ', preg_split("/\//", substr($bean_folder, strlen($bean_root))))));
+			$desc = file_exists("$bean_folder/README")?file_get_contents("$bean_folder/README"):'';
+			$beans[$name] = $desc;
+		}
+		return $beans;
+	}
+	private function _bean_dir_scan($bean_root, $recursive=true)
+	{
+		$beans = array();
+		foreach (glob("$bean_root/*", GLOB_ONLYDIR) as $dir) {
+			if ($dir=='.'||$dir=='..') continue;
+			if (count(glob("$dir/*.class.php")))  {
+				$beans[] = $dir;
+				if ($recursive) $beans = array_merge($beans, $this->_bean_dir_scan($dir, $recursive));
+			}
+		}
+		return $beans;
 	}
 }
 // Root for application libraries.
@@ -184,39 +282,6 @@ class Library extends Core
 		if (!$this->status['error_code']) return null;
 		$this->status['class'] = get_class($this);
 		return isset($key)?@$this->status[$key]:$this->status;
-	}
-	/*** mix trigger(String $event_name)
-	 *	@description trigger an pre-defined event
-	 *	@input	String $event_name	Event Name
-	 *	@return int number of listners on the event
-	***/
-	public function trigger($event_name)
-	{
-		$event = $this->get_lib('LibEvent');
-		if (!$event) return $event; // event bean not installed
-		return $event->trigger($event_name, $this);
-	}
-	/*** mix add_listner(String $event_name[, array $scope=null[, int $notify=0[, String $handler]]])
-	 *	@description	Add a listner to the event.
-	 *	@input	String $event_name	Event Name
-	 *			array $scope	Effective Scope
-	 *			int $notify		Notice type
-	 *			String $handler Callback handler
-	 *	@return see LibEvent::add_listner()
-	***/
-	public function add_listner($event_name, $scope=null, $notify=0, $handler=null)
-	{
-        $scope = (array) $scope;
-        foreach (array('domain','dna','user') as $key) if (!isset($scope[$key])) $scope[$key] = 0;
-		$event = $this->get_lib('LibEvent');
-		if (!$event) return $event; // event bean not installed
-		$class_name = get_class($this);
-		return $event->add_listner($event_name, $class_name, $scope, $notify, $handler);
-	}
-	/** setter/getter current operator **/
-	protected function operator($operator=null)
-	{
-		return $operator?$this->set_operator($operator): $this->get_operator();
 	}
 
 	/*** string dsn_parse()
@@ -292,29 +357,4 @@ class Library extends Core
 		}
 		return $hook;
 	}
-    /** Verify dna on a table entry		for table which has dna field
-     * @input   string  $tbl table object name
-     *          int  $id entry_id
-     * @return  bool/array true/entry_record: ok, false: invalid owner
-    ***/
-    protected function dna_verify($tbl=null, $id=0)
-    {
-		$operator = $this->get_operator();
-        if (!$dna=@$operator['dna']) {
-            $this->status['error_code'] = 'NO_DNA';
-            $this->status['error'] = "DNA required to access table: $tbl.";
-            return false;
-        }
-        if (!$id||!$tbl) return true;	// for create entry or action other than action without dna filter (e.g modify/delete)
-        if (is_object($this->tbl->$tbl)) {
-            $entry = $this->tbl->$tbl->read($id);
-            if ($operator['dna']==LibAclUser::DNA_SYS||$entry['dna']==$dna) return $entry?$entry:true; // force to return true if record does not exit
-            $this->status['error_code'] = 'INVALID_DNA';
-            $this->status['error'] = "The operator's dna does not match $tbl's dna.";
-            return false;
-        }
-        $this->status['error_code'] = 'NO_TABLE';
-        $this->status['error'] = "The table $tbl does not exist.";
-        return false;
-    }
 }

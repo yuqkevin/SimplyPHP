@@ -41,26 +41,13 @@ Class Controller extends Web
 
     public function __construct(){
         $this->conf = $this->configure();
-        $this->initial();
     }
 
     public function boot()
     {
-        $stream = $this->mapping($this->request('_PATH'));
-        $this->stream = array_merge((array)$stream, $this->stream);  // overide with stream from initial() if it's applied
-        if (!$this->stream) $this->page_not_found($this->request('_PATH'));
-        // all model access via controller will needs verification
-        if (!$this->model_verify($this->stream['model'])) {
-            $message = "Unauthorized access.".($this->conf['global']['DEBUG']?'[model:'.$this->stream['model'].']':null);
-            $this->page_not_found($message);
-        }
-        $class = preg_replace("/\W/",'',$this->stream['model']);
-        $app = new $class($this->conf, $this->stream);
-        $app->stream = $app->boot();
-        if ($content=$app->load_view($app->stream['view'], $app->stream['data'], $app->stream['suffix'])) $this->output($content, $app->stream['format']);
-        if (!$app->stream['ajax']) $this->page_not_found();
+		$model = new Model($this->conf);
+		$model->switch_to();
     }
-    protected function initial(){}    // reserved for customization
 }
 
 $ctl = new Controller();

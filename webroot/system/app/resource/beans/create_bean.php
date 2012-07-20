@@ -85,3 +85,29 @@ class Lib$class_name extends Library
 EOT;
 file_put_contents("$path/lib.class.php", $body);
 echo "\nOK, the skeleton of bean $class_name has been created.\n";
+
+$body = <<<EOT
+; Component and action definitions and access control
+[MODEL::]
+; model class name in camelcase
+name = "$class_name"
+; description of the model
+description = ""
+; protection option, omitted or set to Off will be disable the model's proctection, that means the model is public accessible.
+protection = On
+
+[HANDLER::]
+; handler definitions
+; handlerName = "handler description"
+
+; FOLLOWING SECTION IS FOR ACTIONS DEFINED IN HANDLERS
+; [handlerName1]
+; action1 = "description1"
+; action2 = "description2"
+
+; [handlerName2]
+; action1 = "description1"
+; action2 = "description2"
+; ...
+EOT;
+file_put_contents("$path/access.ini", $body);

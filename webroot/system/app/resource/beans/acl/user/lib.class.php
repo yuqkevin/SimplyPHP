@@ -62,25 +62,30 @@ class LibAclUser extends LibAcl
 	 ****/
 	function sign_in($name, $pass)
 	{
+		if (!$name||!$pass) {
+			$this->status['error_code'] = 'SIGN_IN_NODATA';
+			$this->status['error'] = "Sorry, you must provide valid login name and password.";
+			return false;
+		}
 		$filter = array('login'=>$name);
 		if ($rows=$this->tbl->account->search($filter)) {
 			if ($rows[0]['pass']==md5($pass)) {
 				$user = $rows[0];
 				$user['group'] = $this->tbl->group->read($user['group']);
-				$domain = $this->tbl->domain->read($user['group']['domain']);
-				//check access domain
-				if ($this->env('DOMAIN')!==$domain['name']) {
-					$pass = false;
-					// check user domain for sys group account
-					if ($user['group']['id']==self::GROUP_SYS) {
-						$domain = $this->tbl->domain->read($user['domain']);
-						$pass = (bool) $this->env('DOMAIN')==$domain['name'];
-					}
-					if (!$pass) {
+				$user['group']['action'] = $this->unserialize($user['group']['action']);
+				if ($user['group']['id']!=self::GROUP_SYS) {
+					//check access domain
+					$domain = $this->tbl->domain->read($user['group']['domain']);
+					if ($this->env('DOMAIN')!==$domain['name']) {
 						$this->status['error_code'] = 'INVALID_ACCESS_DOMAIN';
 						$this->status['error'] = "User has no access on this domain.";
 						return false;
 					}
+					// set user account scope
+					$user['scope'] = $user['id']==$user['dna']?'primary':'regular';
+				} else {
+					$user['group']['action'] = array('*::*::*');	// system supper group, full access
+					$user['scope'] = $user['id']==$user['dna']?'root':'system';
 				}
 				return $this->user_session('new', $user);
 			}
@@ -99,12 +104,6 @@ class LibAclUser extends LibAcl
 	{
 		$this->session_hook('clear');
 		return $this->user_session('close');
-	}
-
-	/*** user information setter/getter ***/
-	function info($user=null)
-	{
-		return  $user?$this->user_session('set', $user):$this->user_session('get');
 	}
 
 	/*** mix session_verify([int $lifetime[, string $login[, string $pass[, bool $cross_domain]]]])
@@ -131,15 +130,15 @@ class LibAclUser extends LibAcl
 		return $operator; // pass
 	}
 
-	/*** array search([array $filter[, string $suffix]])
-	 *	@description listing user with specific filter and suffix limitation
+	/*** array account_search([array $filter[, string $suffix[,string $fields="*"]])
+	 *	@description listing user with specific filter and suffix limitation, for user other than system group, the list is within dan only.
 	***/
-	function search($filter=null, $suffix=null)
+	function account_search($filter=null, $suffix=null, $fields="*")
 	{
-		$operator = $this->info();
+		$operator = $this->user_info();
 		$filter['id::>'] = 1; // Hide system root
 		if (!isset($filter['dna'])&&$operator['dna']!=self::DNA_SYS) $filter['dna'] = $operator['dna'];
-		$lines= $this->tbl->account->search($filter, $suffix);
+		$lines= $this->tbl->account->search($filter, $suffix, $fields);
 		return $lines;
 	}
 
@@ -152,25 +151,26 @@ class LibAclUser extends LibAcl
 	***/
 	function account($act, $id=null, $param=null)
 	{
-		if (!($entry=$this->dna_verify('account', $id))&&!in_array($act,array('check','read'))) return false;
-		$operator = $this->info();
+		if ($id) {
+			$data = $this->tbl->account->read($id);
+			if ($act=='read') return $data;
+			if (!$this->dna_verify($data['dna'])) return false;
+		}
+		$operator = $this->user_info();
 		switch ($act) {
-			case 'read':
-				return $entry?$entry:$this->tbl->account->read($id);
-				break;
 			case 'create':
-				$param['dna'] = $operator['dna'];
+				if (!isset($param['dna'])||$operator['group']['id']!=self::GROUP_SYS) $param['dna']=$operator['dna'];
 				return $this->tbl->account->create($param);
 				break;
 			case 'modify':
 				// Do not allow change dna for user's safty
-				if (isset($param['dna'])&&$operator['dna']!=self::DNA_SYS) unset($param['dna']);
+				if (isset($param['dna'])&&$operator['group']['id']!=self::GROUP_SYS) unset($param['dna']);
 				return $this->tbl->account->update($id, $param);
 				break;
 			case 'primary':
 				// only sys user user can set account to be a primary account
 				if ($operator['dna']==self::DNA_SYS) {
-					return $this->tbl->account->update($id, array('dna'=>$entry['id']));
+					return $this->tbl->account->update($id, array('dna'=>$data['id']));
 				}
 				$this->status['error_code'] = 'NON_SYS_ACCOUNT';
 				$this->status['error'] = "Only system account can change an account to be a primary account.";
@@ -182,9 +182,6 @@ class LibAclUser extends LibAcl
 				$r=$this->tbl->account->search(array('login'=>$id));
 				return @$r[0];
 				break;
-			default:
-				return $entry;
-				break;
 		}
 		return false;
 	}
@@ -194,20 +191,19 @@ class LibAclUser extends LibAcl
 	***/
 	function group($act, $id=null, $param=null)
 	{
-        if (!($entry=$this->dna_verify('group', $id))&&$act!='read') return false;
-        $operator = $this->info();
+		if ($id) {
+			$data = $this->tbl->group->read($id);
+			if ($act=='read') return $data;
+			if (!$this->dna_verify($data['dna'])) return false;
+		}
+        $operator = $this->user_info();
         switch ($act) {
-            case 'read':
-                return $entry;
-                break;
             case 'create':
-				if ($operator['dna']!=self::DNA_SYS) {
-                	$param['dna'] = $operator['dna'];
-				}
+				if (!isset($param['dna'])||$operator['group']['id']!=self::GROUP_SYS) $param['dna']=$operator['dna'];
                 return $this->tbl->group->create($param);
                 break;
             case 'modify':
-				if (isset($param['dna'])&&$operator['dna']!=self::DNA_SYS) unset($param['dna']); // Only system account can change account's dna 
+				if (isset($param['dna'])&&$operator['group']['id']!=self::GROUP_SYS) unset($param['dna']); // Only system account can change account's dna
                 return $this->tbl->group->update($id, $param);
                 break;
             case 'delete':
@@ -217,12 +213,12 @@ class LibAclUser extends LibAcl
         return false;
 	}
 
-	/*** array groups([array $filter[, string $suffix]])
+	/*** array group_search([array $filter[, string $suffix]])
 	 *	@description listing group with specific filter and limit
 	***/
-	function groups($filter=null, $suffix=null)
+	function group_search($filter=null, $suffix=null)
 	{
-		$operator = $this->info();
+		$operator = $this->user_info();
 		if (!isset($filter['dna'])&&$operator['dna']!=self::DNA_SYS) $filter['dna'] = $operator['dna'];
 		return $this->tbl->group->search($filter, $suffix);
 	}
@@ -244,7 +240,7 @@ class LibAclUser extends LibAcl
 	function domain($act, $id=null, $param=null)
 	{
         if (!($entry=$this->dna_verify('domain', $id))&&!in_array($act,array('read','locate'))) return false;
-        $operator = $this->info();
+        $operator = $this->user_info();
         switch ($act) {
             case 'read':
                 return $this->tbl->domain->read($id);
@@ -268,5 +264,20 @@ class LibAclUser extends LibAcl
                 break;
         }
         return false;
+	}
+	/*** bool dna_verify(int $obj_dna[, int $operator_dna])
+	 *	@description  verify dna between object and operator, current user is default operator if operator ommited, system user is verified always.
+	 *	@input	$obj_dna	dna of object which has dna property, such as group, user, ..., etc
+	 *			$operator_dna	dna of operator, current user is default if operator ommited here
+	 *	@return	true if get verified, false if failure
+	***/
+	public function dna_verify($obj_dna, $operator_dna=null)
+	{
+		if (!isset($operator_dna)) {
+			$operator = $this->user_info();
+			if ($operator['group']['id']==self::GROUP_SYS) return true;
+			$operator_dna = $operator['dna'];
+		}
+		return $obj_dna===$operator_dna;
 	}
 }

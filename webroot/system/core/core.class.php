@@ -21,11 +21,18 @@ Class Core
 	const PREFIX_MODEL = 'Mo';	// user model prefix
 	const PREFIX_LIB = 'Lib';	// user library prefix
 	const HOOK_LIB = 'library';
+	const HOOK_MODEL = 'model';
 	const HOOK_DB = 'database';
 	const HOOK_VAR = 'w3s_var';
 	const DEFAULT_ENTRY = 'main';
 	const W3S_SEQ = 'w3s_sequence';
 	const REQUEST_SESSION = 'w3s_request';	// for input cache
+	// user session hook
+    const USER_SESSION_AUTH = 'W3S::USER_SA'; // user authenticate session
+    const USER_SESSION_HOOK = 'W3S::USER_SH'; // store session which has same lifetime as user authenticated session
+
+	const CACHE_CLEAR_TTL = -1;	// clear specific cache
+
 
 	public function __construct(){}
 
@@ -70,6 +77,25 @@ Class Core
         }
 		return self::_hook_var(&$_SESSION, $name, $val);
     }
+	/*** mix cookie(string $name[, string $val=null[, int $lifetime=null]])
+	 *	@description getter/setter of cookie
+	 *	@input	$name	cookie name
+	 *			$val	value of cookie for setting, 'clear','' for clear cookie
+	 *			$lieftime	0:for browser lifetime, 1:for permanant, others is lifetime in seconds
+	 *	@return	value of cookie for read
+	 *			true for setting ok, false for setting failure
+	***/
+	public function cookie($name, $val=null, $lifetime=0)
+	{
+		if (!isset($val)) return @$_COOKIE[$name];
+		if (!$val||$val=='clear') {
+			if (isset($_COOKIE[$name])) unset($_COOKIE[$name]);
+			return true;
+		}
+		if (is_array($val)) $val = serialize($val);
+		if ($lifetime==1) $lifetime = time()+315360000;	// 10 years
+		return setcookie($name, $val, $lifetime);
+	}
 	private function _hook_var(&$scope, $name, $val)
 	{
 		$HOOK = self::HOOK_VAR;
@@ -83,11 +109,22 @@ Class Core
     public function sequence($offset=0, $schema=null)
     {
 		if (!$schema) $schema = self::W3S_SEQ;
-        if ($offset=='reset') return self::session($schema, 1);
+        if ($offset=='reset') return self::session($schema, 0);
         $seq = intval(self::session($schema)) + $offset;
         if ($offset) self::session($schema, $seq);
         return $seq;
     }
+
+    /*** mix user_info([string $name])
+     *  @description read user authentication session
+     *  @input $name    property name
+     *  @return mix whole user session if no property name given or property value by given name
+    ***/
+	public function user_info($name=null)
+	{
+		if (!$info=$this->session(self::USER_SESSION_AUTH)) return false;
+		return $name?@$info[$name]:$info;
+	}
 
 	/*** mix request(string $name[, string $method[,mix $init_val]])
 	 *	@description	get request parameters. method: get,post,session,set. post>get if non method given. post>get>session if method is 'session'
@@ -180,23 +217,30 @@ Class Core
 					return apc_store($name, $val, $ttl);
 				}
 				return apc_fetch($name);
-			default: // local file 
+			case 'local': // local file
+			default: // no defined
 				$pool = isset($this->conf['cache']['local'])&&$this->conf['cache']['local']?$this->conf['cache']['local']:(sys_get_temp_dir().'/cache');
 				$file_name = preg_match("/^\w{32}$/", $name)?$name:md5($name);
 				$div = $pool.'/'.$this->env('DOMAIN').'/'.$name[0];	// sub folder
 				if (!is_dir($div)) {
 					if (!mkdir($div, 0700, true)) $this->error("Failed to create cache pool $div. Please check your cache setting in configure file.");
 				}
+				$file = $div.'/'.$file_name;
+				if ($ttl==self::CACHE_CLEAR_TTL) {
+					// clear cache
+					return file_exists($file)?unlink($file):true;
+				}
 				if (isset($val)) {
 					// write into cache in format expire_timestanmp:content
+					if (is_array($val)) $val = serialize($val);
 					$expire = sprintf("%010d", $ttl?(time()+$ttl):0);
-					return (bool) file_put_contents($file_name, "$expire:$val");
+					return (bool) file_put_contents($file, "$expire:$val");
 				}
 				// read cache
-				if (file_exists($file_name)) {
-					$content = file_get_contents($file_name);
+				if (file_exists($file)) {
+					$content = file_get_contents($file);
 					$expire = intval(substr($content, 0, 10));
-					if (time()<=$expire||$expire===0) return substr($content, 11); // actively cached
+					if (time()<=$expire||$expire===0) return $this->unserialize(substr($content, 11)); // actively cached
 					// expired
 				}
 				return false;
@@ -224,7 +268,7 @@ Class Core
 	protected function load_dependencies()
 	{
 		foreach ((array)$this->dependencies as $class => $name) {
-			if ($name) self::load_lib($class, $name);
+			if ($name) $this->load_lib($class, $name);
 		}
 	}
 	/** load library
@@ -236,7 +280,7 @@ Class Core
 	{
 		// dependency checking
 		// $zone = get_class($this);
-		// if (!in_array($class_name, array_keys($this->dependencies))) $this->error("Error! the class $class_name is not defined in dependency array of $zone.");
+		if (!in_array($class_name, array_keys($this->dependencies))) $this->error("Error! the class $class_name is not defined in dependency array of ".get_class($this));
 		if (!$name) $name = substr($class_name, strlen(self::PREFIX_LIB)); //remove prefix header
 		$libraries = $this->global_store(self::HOOK_LIB);
 		$lib = null;
@@ -247,7 +291,6 @@ Class Core
 			if (method_exists($lib, 'get_error')&&($error=$lib->get_error())) {
 				$this->error('Error Code:'.$error['error_code'].' '.$error['error']);
 			}
-			//if ($this->operator&&method_exists($lib, 'operator')) $lib->operator($this->operator);
 			$libraries[$class_name] = $lib;
 			$this->global_store(self::HOOK_LIB, $libraries);
 		}
@@ -259,6 +302,21 @@ Class Core
 		}
 		return $lib;
 	}
+	/*** loading model and put it on hook **/
+	protected function load_model($model_name, $stream=null)
+	{
+        $models = $this->global_store(self::HOOK_MODEL);
+        $model = null;
+        if (isset($models[$model_name])) {
+            $model = $models[$model_name];
+        } else {
+            $model = new $model_name($this->conf, $stream);
+            $models[$model_name] = $model;
+            $this->global_store(self::HOOK_MODEL, $models);
+        }
+		if ($stream) $model->stream = $stream;
+		return $model;
+	}
 	/*** mapping component to url  **/
 	public function component_url($model_name, $method, $ajax=true)
 	{
@@ -268,6 +326,92 @@ Class Core
 		if ($ajax) $url .= ($url=='/'?null:'/').$this->conf['global']['ajax_frag'];
 		return $url.($url=='/'?null:'/').$method;
 	}
+
+	/*** array conf_model()
+	 *	@description get listing of accessable models based on configure file
+	 *	@input none
+	 *	@return	list of model name=>file
+	***/
+	public function conf_model()
+	{
+		$defs = array_merge($this->conf['access']['model'], array_keys((array)$this->conf['route']));
+		$models = array();
+		foreach ($defs as $def) {
+			if (substr($def, -1)=='*') {
+				$def = substr($def, 0, -1);
+				$dir = dirname($this->bean_file($def));
+				$limit = '\/model\.class\.php$';
+				$files = $this->recursive_scandir($dir, $limit);
+				foreach ($files as $file) {
+					if ($offset=substr(dirname($file), strlen($dir)+1)) {
+						$class_name = $def.str_replace(' ','', ucwords(join(' ',preg_split("/\//", $offset))));
+					} else {
+						$class_name = $def;
+					}
+					$models[$class_name] = $file;
+				}
+			} else {
+				$models[$def] = $this->bean_file($def);
+			}
+		}
+		return $models;
+	}
+
+	/*** array recursive_scandir(string $root[, string $file_name=null])
+	 *	@description recursively scan directory with file name in regular express (optional)
+	 *	@input	$root	start directory name
+	 *			$file_name	file name match in regular express
+	 *	@return	matched $files in array
+	***/
+	protected function recursive_scandir($root, $file_name=null)
+	{
+		$files = array();
+		foreach (glob("$root/*") as $node) {
+			if (is_dir($node)) {
+				if (!$file_name) $files[] = $node;	// folder
+				$files = array_merge($files, $this->recursive_scandir($node, $file_name));
+			} else {
+				if (!$file_name||($file_name&&preg_match("/$file_name/", $node))) $files[] = $node;
+			}
+		}
+		return $files;
+	}
+    /*** array action_def(string $model)
+     *  @description read and parse access.ini into array for given model
+     *  @input $model   modelName
+     *  @return array parsed from ini file
+     *          null if access file does not exist, which means the model is public
+     *          false if model does not exist which means wrong model name
+    ***/
+    public function action_def($model)
+    {
+        $model_file = $this->bean_file($model);
+        if (!$model_file) return false;
+        $access_file = dirname($model_file)."/access.ini";
+        if (!file_exists($access_file)) return null;
+        return parse_ini_file($access_file, true);
+    }
+	
+	/*** bool action_verify(string $model, string $handler[, string $action='*'])
+	 *	@description  verify given action for current user
+	 *	@input $model	model name in camelcase
+	 *		   $handler handler name
+	 *		   $action  action name
+	 *	@return	true if ok, false if denied
+	***/
+	public function action_verify($model, $handler, $action='*')
+	{
+        if (!$map=$this->action_def($model)) return $map!==false;   // true for pulic model, false for wrong model given
+		if (!isset($map['MODEL::']['protection'])||!$map['MODEL::']['protection']) return true;	// public model
+        if (!isset($map['MODEL::'][$handler])) return true;   // public access component
+        if (!$group=$this->user_info('group')) return false;    // no logged in or idle user
+		if (!$actions=$group['action']) return false;	// no defined action for the group
+		foreach (array("$model::$handler::$action","$model::$handler::*","$model::*::*","*::*::*") as $pattern) {
+			if (in_array($pattern, $actions)) return true;
+		}
+		return false;
+    }
+
 	/*** String model_name(String $model_name[, bool $class=true])
 	 *	@description	Generating standard class name or url path portion based on given model name
 	 *	@input	String $model_name		model name
@@ -365,14 +509,23 @@ Class Core
         $array = array();
         foreach ((array)$lines as $line) {
             if (isset($fval)) {
-                $array[$line[$fkey]] = $line[$fval];
+				if (is_array($fval)) {
+					$array[$line[$fkey]] = array();
+					foreach ($fval as $f) $array[$line[$fkey]][$f] = $line[$f];
+				} else {
+                	$array[$line[$fkey]] = $line[$fval];
+				}
             } else {
                 $array[] = $line[$fkey];
             }
         }
         return $array;
     }
-
+	/*** string hash2str(array $hash)
+	 *	@description convert hash to string in format key1="val1" key2="val2" ...
+	 *	@input $hash	array(key1=>val1,key2=>val2, ...)
+	 *	@return	String	key1="val1" key2="val2" ...
+	***/
 	public function hash2str($hash)
 	{
 		$str = null;
@@ -446,19 +599,7 @@ Class Core
 		$lib_file = $this->bean_file($lib_full_name);
 		return file_exists($lib_file)?$this->load_lib($lib_full_name):false;
 	}
-	/*** get user info from particular access control library, default library is LibAclUser ***/
-	public function get_operator($acl_lib='LibAclUser')
-	{
-		// if (!$this->get_dependencies($acl_lib)) return null;	// no user
-		if ($user=$this->get_lib($acl_lib)) return $user->info();
-		return null;
-	}
-	/*** set user info from particular access control library, default library is LibAclUser ***/
-	public function set_operator($operator, $acl_lib='LibAclUser')
-	{
-		if ($user=$this->get_lib($acl_lib)) return $user->info($operator);
-		return null;
-	}
+
 	/** Global Data Storage **/
 	protected function global_store($name, $val=null)
 	{
@@ -589,7 +730,7 @@ class Web extends Core
         return preg_split("|/|", $url);
     }
 	/** mix mapping(string $url[, bool $method_check=false])
-	 *	@description Parsing URL into hash stream: URL=>stream **
+	 *	@description Parsing URL into hash stream
 	 *	@input	string $url	url
 	 *			bool $method_check	force to check method file, give error if method file doesn't exist and method_check is set to true
 	 *	@output	array stream for valid url
@@ -604,11 +745,10 @@ class Web extends Core
 			'method'=>null,
 			'param'=>null,		// linear array, param from url. e.g. /user/login
 			'conf'=>null,		// component conf/initial data in hash. e.g. array('key1'=>val1,'key2'=>val2,...)
-			'model_url'=>null,	// stake url for model call
-			'comp_url'=>null,	// stake url for component call. usually like: /model/ajax_frag/method
 			'model_file'=>null,
 			'method_file'=>null,  // file without suffix (e.g .inc.php or .tpl.php)
-			'view'=>null,		  // mostly it's same as mothod_file in ajax, but folder /model/ may be change to /view/ later in no-ajax mode, and file name may be expanded as well.
+			'view_file'=>null,		  // mostly it's same as mothod_file in ajax, but folder /model/ may be change to /view/ later in no-ajax mode, and file name may be expanded as well.
+			'comp_url'=>null,	// stake url for component call. usually like: /model/ajax_frag/method
 			'data'=>null,
 			'suffix'=>null,
 			'ajax'=>false,		// deside view's folder. view stay with handler if true, otherwise in view folder.
@@ -619,132 +759,135 @@ class Web extends Core
 		$stream['url'] = $url;
 		$default=array_search('/', $this->conf['route']);
 		$index = @$this->conf['global']['index']?$this->conf['global']['index']:Core::DEFAULT_ENTRY;
-		// mapping model & method via url
-		$ajax_offset = strpos($url,'/'.$this->conf['global']['ajax_frag'].'/');
-		if ($ajax_offset!==false) {
-			// check if it's a valid ajax request url
-			$offset = substr($url, 0, max(1,$ajax_offset));
-			if ($model=array_search($offset, $this->conf['route'])) {
-				// match offset found in configure: offset/ajax/...
-				$stream['ajax'] = true;
-				$stream['model'] = $model;
-				$stream['comp_url'] = ($offset=='/'?null:$offset).'/'.$this->conf['global']['ajax_frag']; // method will be added later
-				$url = substr($url, strlen($offset.'/'.$this->conf['global']['ajax_frag']));
-				$r = $this->url2array($url);
-			} elseif ($r[1]==$this->conf['global']['ajax_frag']) {
-				// /model/ajax/method ...
-				$stream['ajax'] = true;
-				$model_path = array_shift($r);
-                $stream['model'] = self::PREFIX_MODEL.$model_path;
-				$stream['comp_url'] = "/$model_path/".array_shift($r); // method will be added later
-			}
-		}
+		$stream['ajax'] = in_array($this->conf['global']['ajax_frag'], $r);
 
-		if (!$stream['ajax']) {
-			// check offset if match on model configure setting
-			$offset = $url;
-			$model = null;
-			while ($offset) {
-				if ($model=array_search($offset, $this->conf['route']))	{
-					// check if url is in /UserModel/method ...
-					if ($offset=='/'&&isset($r[0])&&preg_match("/[A-Z]/", $r[0])) $model=null; // ignore default model, using pattern /UserModel/method ...
-					break;
+		// check in Model/method pattern first
+		if (count($r)>=2) {
+			$model = self::PREFIX_MODEL.array_shift($r);
+			if ($this->conf['global']['ajax_frag']==$r[0]) array_shift($r);
+			$method = isset($r[0])?array_shift($r):null;
+			if ($method) {
+				if ($component=$this->component_locator($model, $method, $stream['ajax'])) {
+					$stream = array_merge($stream, $component);
+					$stream['param'] = $r;
+					return $stream;
 				}
-				if ($offset=='/') break;
-				$offset = dirname($offset);
-			}
-			if (!$model) {
-				// no matched offset
-                if ($url=='/') {
-                    if (!$default) {
-                        $this->error("No default model defined in configuration.");
-                        return null;
-                    }
-                    // using default model, default method
-                    $r[0] = substr($default, strlen(self::PREFIX_MODEL));
-                }
-                // url format: /model/method...
-				$stream['model'] = self::PREFIX_MODEL.$r[0];
-				$stream['comp_url'] = $r[0].'/'.$this->conf['global']['ajax_frag']; // method will be added later
-				array_shift($r);
-			} else {
-				$stream['model'] = $model;
-				$stream['comp_url'] = ($offset=='/'?null:$offset).'/'.$this->conf['global']['ajax_frag']; // method will be added later
-				$url = substr($url, strlen($offset));
-				$r = $this->url2array($url);
 			}
 		}
-		// verify model
-		if (!$this->model_locator($stream['model'])) return null;	// invliad model
-		// locate method
-		if (!isset($r[0])||!$r[0]) $r[0] = $index; // using default if no method given in url
-		list($stream['model_file'], $stream['method_file'], $stream['view']) = $this->model_locator($stream['model'], $r[0]);
-		if (!((bool)$stream['method_file']||(bool)$stream['view'])&&$r[0]!=$index) {
-			// un-recognized method, using default method
-			array_unshift($r, $index);
-			list($stream['model_file'], $stream['method_file'], $stream['view']) = $this->model_locator($stream['model'], $r[0]);
-		}
-		$stream['method'] = array_shift($r);
 
-		if ($method_check&&!((bool)$stream['method_file']||(bool)$stream['view'])) {
-			$this->status['error_code'] = 'INVALID_METHOD';
-			$this->status['error'] = "Invalid method. {$stream['method']}";
-			return null;
+		// check configuration route setting
+		$model = $offset = null;
+		$frags = array();
+		while (true) {
+			if ($model=array_search($url, $this->conf['route'])) {
+				$offset = $url;
+				break;
+			}
+			if ($url==='/') break;
+			array_unshift($frags, basename($url));
+			$url = dirname($url);
 		}
-		$stream['comp_url'] .= '/'.$stream['method'];
-		$stream['param'] = count($r)?$r:null;
-		if ($stream['ajax']) $stream['view'] = $stream['method_file']; // using component view instead of page view for ajax request
+		$stream['ajax'] = in_array($this->conf['global']['ajax_frag'], $frags);
+		if (!$model) {
+			// not found in route table
+			if (!count($frags)) return null;	// model defined for '/'
+			$model = self::PREFIX_MODEL.array_shift($frags);
+		}
+		if ($stream['ajax']) array_shift($frags);	// remove ajax frag
+		$method = isset($frags[0])?array_shift($frags):($stream['ajax']?null:$index);
+		if (($method_check||$stream['ajax'])&&!$method) return null;	// no method defined, method is mandatory for method checking or ajax mode
+		// verfiy the component
+		if (!$component=$this->component_locator($model, $method, $stream['ajax'])) {
+			if (!$offset) return null;	// no matched model in route configuration
+			if (get_class($this)==$model) return null;	// avoiding cycle calling
+			$app = $this->load_model($model, $stream);
+			if (!$app_stream=$app->mapping($stream['url'], $method_check)) return null;	// not found match customer route
+			$stream = array_merge($stream, $app_stream);
+		} else {
+			$stream = array_merge($stream, $component);
+			$stream['param'] = $frags;
+		}
 		return $stream;
 	}
-	public function model_locator($model, $method=null)
+	/*** mix component_locator(string $model[,string $method[,bool $ajax=false]])
+	 *	@description	check component if exists and fulfill stream by given model, method and ajax option.
+	 *	@input	$model	model name
+	 *			$method	method name (optional)
+	 *			$ajax	ajax option
+	 *	@return	string model file name if just model name given
+	 *			array('model'=>model,'method'=>method,'ajax'=>ajax,'model_file'=>model_file, 'method_file'=>method_file, 'view_file'=>view_file)
+	 *			false if no valid file found
+	***/
+	public function component_locator($model, $method=null, $ajax=true)
 	{
 		$model_name = $this->model_name($model);
 		$model_file = $this->bean_file($model_name);
 		if (!file_exists($model_file)) {
 			$this->status['error_code'] = 'FILE_DOES_NOT_EXIST';
 			$this->status['error'] = "The model file does not exist: $model_file.";
-			return null;
+			return false;
 		}
 		if (!isset($method)) return $model_file;
-		$method_file = $view_file = null;
 		$suffix_inc = '.inc.php';
 		$suffix_tpl = '.tpl.php';
-		$file = dirname($model_file).'/handler/'. $method;
-		if (file_exists($file.$suffix_inc)||file_exists($file.$suffix_tpl)) $method_file = $file;
-		$file = dirname($model_file).'/view/'. $method;
-		if (file_exists($file.$suffix_tpl)) $view_file = $file;
-		return array($model_file, $method_file, $view_file);
+		$file = dirname($model_file).'/handler/'.$method;
+		// method file
+		$method_file = $file.$suffix_inc;
+		if (!file_exists($method_file)) $method_file = null;
+		// view file
+		if (!$ajax) $file = dirname($model_file).'/view/'. $method;
+		$view_file = $file.$suffix_tpl;
+		if (!file_exists($view_file)) $view_file = null;
+		if (!($method_file||$view_file)) return null;	// invalid component
+		return array(
+			'model'=>$model,
+			'method'=>$method,
+			'ajax'=>$ajax,
+			'comp_url'=>$this->component_url($model, $method, true),
+			'model_file'=>$model_file, 
+			'method_file'=>$method_file, 
+			'view_file'=>$view_file
+		);
 	}
+
+	/*** bool model_verify(string $model_name)
+	 *	@description verify a model with config in sections access,route and domain, only registered model can be verified
+	 *	@input $model_name	model name in camelcase
+	 *	@return	true if verified, or false for failure of verification
+	***/
 	public function model_verify($model_name)
 	{
-		$model_name = $this->model_name($model_name);	// format model_name
+		// format model_name
+		$model_name = $this->model_name($model_name);
+		// check access section in config
 		if (in_array($model_name, $this->conf['access']['model'])) return true;
-		if (isset($this->conf['route'][$model_name])) return true;
-		if (isset($this->conf['domain'][$model_name])) {
-			$domains = preg_split("/[,\s]+/", strtolower($this->conf['domain'][$model_name]));
-			if (in_array($this->env('DOMAIN'), $domains)) return true;
-		}
-		// check wildcard match
+		// check wildcard match in access section
 		$path = preg_split("/\//", preg_replace("/([a-z0-9])([A-Z])/", "\\1/\\2", $model_name));
 		$class_str = null;
 		foreach ($path as $frag) {
 			$class_str .= $frag;
 			if (in_array("$class_str*", $this->conf['access']['model'])) return true;
 		}
+		// then check route table in config
+		if (isset($this->conf['route'][$model_name])) return true;
+		// then check domain dedicated models in config
+		if (isset($this->conf['domain'][$model_name])) {
+			$domains = preg_split("/[,\s]+/", strtolower($this->conf['domain'][$model_name]));
+			if (in_array($this->env('DOMAIN'), $domains)) return true;
+		}
 		return false;
 	}
-    public function load_view($view_name, $bind=null, $ext=null)
+    public function load_view($view, $bind=null, $ext=null)
     {
-		$template = "$view_name.tpl.php";
-        if (!$view_name||!file_exists($template)) return $bind;
-
+		if (substr($view, -8)!='.tpl.php') $view .= ".tpl.php";
+        if (!file_exists($view)) return $bind;
         if (is_array($bind) && array_keys($bind)!==range(0, count($bind)-1)) {
             foreach ($bind as $key=>$val) {
                 $$key = $val;
             }
         }
         ob_start();
-        include $template;
+        include $view;
         $content = ob_get_contents();
         ob_end_clean();
         return $content;
@@ -777,26 +920,31 @@ EOT;
 			$url = '/';	// invalid parameter, redirect to home
 		}
 		if ($url==='/') {
-			header("location:{$this->stream['offset']}", true, $code);
+			if ($this->stream['offset']) $url = $this->stream['offset'];
+			header("location:$url", true, $code);
 		} elseif ($url[0]==='/') {
 			header("location:$url", TRUE, $code);
 		} else {
-			header("location:{$this->stream['offset']}/$url", true, $code);
+			if ($this->stream['offset']) $url = "{$this->stream['offset']}/$url";
+			header("location:$url", true, $code);
 		}
 		exit;
 	}
 	public function page_not_found($message=null)
 	{
 		$url = $this->env('URL');
+		$not_found = $this->language_tag('NOT_FOUND');
+		$page_not_found = $this->language_tag('PAGE_NOT_FOUND');
 		echo <<<EOT
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
 <html><head>
-<title>404 Not Found</title>
+<title>404 $not_found</title>
 </head><body>
 <h1>Not Found</h1>
-<p>The requested URL $url was not found on this server.</p>
+<p>$page_not_found</p>
 <hr>
-<address>$message</address>
+<address>$url</address>
+<p>$message</p>
 </body></html>
 EOT;
 		exit;

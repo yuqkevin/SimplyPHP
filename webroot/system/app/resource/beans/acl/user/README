@@ -28,3 +28,8 @@ Group
  . modify
  . remove
  . list
+
+Group dna assign:
+System Staff: group.dna=DNA_SYS
+primary client: group.dna=DNA_SYS (defined by system staff for client primary account)
+regular client: group.dna=primary account.dna (defined by primary account)

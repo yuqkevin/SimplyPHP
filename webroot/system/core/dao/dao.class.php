@@ -356,20 +356,35 @@ class Dao
 	/*** Suffix processor:
 	 *	array(
 			'orderby'=>array(key1=>dirction1,key2=>direction2,...),
+			'groupby'=>array(key1,key22,...),
 			'limit'=>'start lenght'
 		)
 	***/
 	protected function suffix($suffix, $prefix=null)
 	{
 		if (!$suffix||is_string($suffix)) return $suffix;
+		if ($prefix&&substr($prefix,-1)!=='_') $prefix .= '_';
 		$suffix_str = null;
+		if (isset($suffix['groupby'])&&($groupby=$suffix['groupby'])) {
+			$suffix_str .= " group by ";
+			if (is_array($groupby)) {
+                $groups = array();
+                foreach ($groupby as $key) $groups[] = strpos($key, $prefix)===0?$key:"$prefix$key";
+                $groupby = join(",", $orders);
+            } elseif (strpos($groupby, $prefix)!==0) {
+                $groupby = $prefix.$groupby;
+            }
+            $suffix_str .= $groupby;
+
+		}
 		if (isset($suffix['orderby'])&&($orderby=$suffix['orderby'])) {
-			$suffix_str .= "order by ";
+			$suffix_str .= " order by ";
 			if (is_array($orderby)) {
 				$orders = array();
-				if ($prefix&&substr($prefix,-1)!=='_') $prefix .= '_';
-				foreach ($orderby as $key=>$dir) $orders[] = "$prefix$key $dir";
+				foreach ($orderby as $key=>$dir) $orders[] = strpos($key, $prefix)===0?"$key $dir":"$prefix$key $dir";
 				$orderby = join(",", $orders);
+			} elseif (strpos($orderby, $prefix)!==0) {
+				$orderby = $prefix.$orderby;
 			}
 			$suffix_str .= $orderby;
 		}
