@@ -94,7 +94,8 @@ name = "$class_name"
 ; description of the model
 description = ""
 ; protection option, omitted or set to Off will be disable the model's proctection, that means the model is public accessible.
-protection = On
+; values: off: public access; on: only listed handlers can be protected; full:all handlers are protected
+protection = "full"
 
 [HANDLER::]
 ; handler definitions
