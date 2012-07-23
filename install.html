@@ -129,34 +129,36 @@ webroot--+--system/--+--app/--+--beans/--+--beanA/
                                +--bean.class.php
 </pre>
 		<a name="bean_structrue"></a>
-		<h3>File System Structure: Bean</h3>
+		<h3>File System Structure for Standard SimplyPHP Bean</h3>
 <pre style="background:#333;color:#eee;max-height:50em;">
 beanA/--+--README
         |
-        +--model.class.php
+        +--model.class.php	user data processing class, work with handler for user request, access business logic/data via Libraries
         |
-        +--lib.class.php
+        +--lib.class.php	implement business logic and operation on database access object.
         |
-        +--handler/--+--page1.inc.php
+        +--access.ini		component access control definition.
+        |
+        +--handler/--+--page1.inc.php	handler for user request which url leading with /beanA/page1
         |            |
         |            +--page2.inc.php
         |            |
         |            ...
         |            |
-        |            +--methodA.inc.php,methodA.tpl.php
+        |            +--componentA.inc.php,componentA.tpl.php		the tpl.php is view for ajax request on component, such as url like /beanA/jax/componentA
         |            |
-        |            +--methodB.inc.php,methodB.tpl.php
+        |            +--componentB.inc.php,componentB.tpl.php
         |            ...
         |
-        +--view/--+--page1.tpl.php
+        +--view/--+--page1.tpl.php	view for user request like /beanA/page1 or /beanA/page1/...
         |         |
         |         +--page2.tpl.php
         |         |
         |         ...
         |
-        +--database/--+--db.tbl.ini
+        +--database/--+--db.tbl.ini	database table object definition
                       |
-                      +--db.sql
+                      +--db.sql		database table definition
 </pre>
 
 		<div style="text-align:right;border-top:1px dotted gray;">
