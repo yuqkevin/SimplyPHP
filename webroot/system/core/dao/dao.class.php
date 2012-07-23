@@ -333,7 +333,8 @@ class Dao
 		$errlog = isset($this->dsn['errlog'])&&$this->dsn['errlog']?$this->dsn['errlog']:"/var/tmp/db-error.log";
 		if ($err) {
 			$this->error = $err;
-			$err_msg = sprintf("%s\t%s\t%s\n%s\n", date('Y-m-d H:i:s'), $_SERVER['REMOTE_ADDR'], is_array($err)?serialize($err):$err, print_r(debug_backtrace(), true));
+			$err_msg = sprintf("%s\t%s\t%s\n%s\n", date('Y-m-d H:i:s'), 
+				isset($_SERVER['REMOTE_ADDR'])?$_SERVER['REMOTE_ADDR']:'Unknown', is_array($err)?serialize($err):$err, print_r(debug_backtrace(), true));
 			error_log($err_msg, 3, $errlog);
 		}
 		if ($this->error&&!$this->transaction) {
@@ -345,13 +346,6 @@ class Dao
 		return true;
 	}
 
-    public function load_table($table_def)
-    {
-		$prefix = strtolower(@$table_def['prefix']);
-		if (substr($prefix, -1)!=='_') $prefix .= '_';
-		if (isset($table_def['pkey'])&&strpos($table_def['pkey'], $prefix)===0) $table_def['key']=substr($table_def['pkey'], strlen($prefix));
-        return  new TableObject($table_def, $this);
-    }
 
 	/*** Suffix processor:
 	 *	array(
@@ -522,14 +516,22 @@ class Dao
 		}
 		return $hash;
 	}
-}
 
+	public function load_table($table_def, $hook_name=null)
+	{
+		$prefix = strtolower(@$table_def['prefix']);
+		if (substr($prefix, -1)!=='_') $prefix .= '_';
+		if (isset($table_def['pkey'])&&strpos($table_def['pkey'], $prefix)===0) $table_def['key']=substr($table_def['pkey'], strlen($prefix));
+    	return  new TableObject($table_def, $this);
+	}
+}
 /*** Table Object ***
  *	Generic Database Table Operations
 ***/
 Class TableObject
 {
 	protected $table = null;
+
 	public function __construct($table, $db)
 	{
 		$this->table = $table;

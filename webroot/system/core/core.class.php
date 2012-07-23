@@ -403,7 +403,7 @@ Class Core
 	{
         if (!$map=$this->action_def($model)) return $map!==false;   // true for pulic model, false for wrong model given
 		if (!isset($map['MODEL::']['protection'])||!$map['MODEL::']['protection']) return true;	// public model
-        if (!isset($map['MODEL::'][$handler])) return true;   // public access component
+        if ($map['MODEL::']['protection']!=='full'&&!isset($map['HANDLER::'][$handler])) return true;   // public access component
         if (!$group=$this->user_info('group')) return false;    // no logged in or idle user
 		if (!$actions=$group['action']) return false;	// no defined action for the group
 		foreach (array("$model::$handler::$action","$model::$handler::*","$model::*::*","*::*::*") as $pattern) {
@@ -656,7 +656,11 @@ Class Core
 		if ($key&&!isset($_POST[$key])) return null;
 		foreach ($post as $k=>$v) {
 			if ($key&&$k!==$key) continue;
-			$post[$k] = is_array($v)?self::_postvars($v):trim($magic?stripslashes($v):$v);
+			if (is_array($v)) {
+				for ($i=0; $i<count($v); $i++) $post[$k][] = trim($magic?stripslashes($v[$i]):$v[$i]);
+			} else {
+				$post[$k] = trim($magic?stripslashes($v):$v);
+			}
 		}
 		return isset($key)?(isset($post[$key])?$post[$key]:null):$post;
 	}
@@ -1055,18 +1059,13 @@ EOT;
     {
 		if (!count(array_keys($_FILES))) return null;
 		if (!$target) return false;
-		$name = null; // use upload file name as default
-		if (substr($target,-1)!=='/') {
-			$name = basename($target);
-			$target = dirname($target);
-		} else {
-			$target = substr($target, 0, -1);
-		}
-		if (!is_dir($target)) {
-			if (!mkdir($target, 0777, true)) return false;
-		}
         if (is_array($_FILES[$userfile]["error"])) {
             // batch upload
+			$name = null;
+			if (!is_dir($target)) {
+            	if (!mkdir($target, 0777, true)) return false;
+			}
+
             $results = array();
             foreach ($_FILES[$userfile]["error"] as $key => $error) {
                 $result = false;
@@ -1105,21 +1104,16 @@ EOT;
         if (!$_FILES[$userfile]['name']) return false;  // invliad tag name
 		$r = preg_split("/\./", $_FILES[$userfile]['name']);
 		$ext = array_pop($r);
-		if (!$name&&count($r)) $name=join('.', $r);
 		if ($filter&&$filter!=='*') {
 			if (!in_array(strtolower($ext), $filter)) return false;
 		}
         $tmp_name = $_FILES[$userfile]['tmp_name'];
-		if (!$name) {
-			$target .= '/'.$ext;
-		} else {
-			$name = preg_replace("/^\./","_", $name);
-			$target .= "/$name.$ext";
-		}
+
         if ($callback) {
             return call_user_func($callback, $tmp_name, $target);
-        } elseif (!move_uploaded_file($tmp_name, $target)) {
-            return null;
+        } else {
+			$target = is_dir($target)?"$target/{$_FILES[$userfile]['name']}":$target;
+			if (!move_uploaded_file($tmp_name, $target)) return null;
         }
         return $target;
     }
