@@ -133,7 +133,7 @@ class Model extends Web
 			return "<a title=\"$message\" style=\"color:red;\">$error</a>";
 		}
         // set cache flag off first
-        $stream['cache'] = false;
+        $stream['cache'] = isset($stream['cache'])?intval($stream['cache']):(isset($stream['conf']['cache'])?intval($stream['conf']['cache']):0);
         $handler_id = $this->env('DOMAIN').serialize($stream).serialize($_REQUEST);
         $stream['cache_handler'] = strlen($handler_id).bin2hex(md5($handler_id));
         // check cacke first
@@ -147,7 +147,7 @@ class Model extends Web
             $stream = $app->handler();
             $content = $app->load_view($stream['view_file'], @$stream['data'], @$stream['suffix']);
             // check cache contol
-            if ($stream['cache']!==false) {
+            if (intval($stream['cache'])>0) {
                 // cache content
                 $app->cache($stream['cache_handler'], $content, intval($stream['cache']));
             }
