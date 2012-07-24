@@ -453,6 +453,7 @@ Class Core
         if (!$map=$this->action_def($model)) return $map!==false;   // true for pulic model, false for wrong model given
 		if (!isset($map['MODEL::']['protection'])||!$map['MODEL::']['protection']) return true;	// public model
         if ($map['MODEL::']['protection']!=='full'&&!isset($map['HANDLER::'][$handler])) return true;   // public access component
+		// all handler are protected or the handler has been defined as protected
         if (!$group=$this->user_info('group')) return false;    // no logged in or idle user
 		if (!$actions=$group['action']) return false;	// no defined action for the group
 		foreach (array("$model::$handler::$action","$model::$handler::*","$model::*::*","*::*::*") as $pattern) {

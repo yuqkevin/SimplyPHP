@@ -186,13 +186,13 @@ class Model extends Web
 		return count($keys)==1?$vals[$keys[0]]:$vals;
 	}
 
-	/*** string token_key([int $length=8[,string $salt=null]])
+	/*** string key_gen([int $length=8[,string $salt=null]])
 	 *	@description generate key for token by given salt (optional), default salt is salt in conf file
 	 *	@input	$int	length of key in character between 4 ~ 32, default is 8 chars
 	 *			$salt	salt for ken generating
 	 *	@return	key in string
 	***/
-	protected function token_key($length=8, $salt=null)
+	protected function key_gen($length=8, $salt=null)
 	{
 		if (!$salt) $salt = $this->conf['global']['salt'];
 		$length = max(4, min(32, $length));
