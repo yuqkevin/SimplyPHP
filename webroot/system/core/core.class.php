@@ -23,7 +23,9 @@ Class Core
 	const HOOK_LIB = 'library';
 	const HOOK_MODEL = 'model';
 	const HOOK_DB = 'database';
-	const HOOK_VAR = 'w3s_var';
+	const HOOK_VAR = 'w3s_var';	// hook name for env vars in both session and global
+	const HOOK_GLOBAL = 'w3s_global';	// hook name in global store
+	const HOOK_BENCHMARK = 'w3s_benchmark';	// global, array(key1=>array('start'=>time,'end'=>time),key2=>....)
 	const DEFAULT_ENTRY = 'main';
 	const W3S_SEQ = 'w3s_sequence';
 	const REQUEST_SESSION = 'w3s_request';	// for input cache
@@ -63,7 +65,7 @@ Class Core
         $HOOK = self::HOOK_VAR;
 		if (!isset($GLOBALS[$HOOK][$env_name])&&$this->session($env_name)) return $this->session($env_name, $val);		// find pre-defined in session only
 		// use global hook as default
-		return self::_hook_var(&$GLOBALS, $env_name, $val);
+		return self::_hook_var(&$GLOBALS, $env_name, $val, $HOOK);
 	}
 	// session getter/setter
     public function session($name, $val=null)
@@ -75,8 +77,22 @@ Class Core
             unset($_SESSION[$HOOK]);
             return true;
         }
-		return self::_hook_var(&$_SESSION, $name, $val);
+		return self::_hook_var(&$_SESSION, $name, $val, $HOOK);
     }
+	/** Global Data Storage **/
+	protected function globals($name, $val=null)
+	{
+		$HOOK = self::HOOK_GLOBAL;
+		return self::_hook_var(&$GLOBALS, $name, $val, $HOOK);
+	}
+	private function _hook_var(&$scope, $name, $val, $HOOK)
+	{
+        if (!isset($scope[$HOOK])) $scope[$HOOK]=array();
+        if (!isset($val)) return isset($scope[$HOOK][$name])?$scope[$HOOK][$name]:null;
+        if ($val=='clear') $val=null;
+        if ($val=='reset') $val='';
+        return $scope[$HOOK][$name]=$val;
+	}
 	/*** mix cookie(string $name[, string $val=null[, int $lifetime=null]])
 	 *	@description getter/setter of cookie
 	 *	@input	$name	cookie name
@@ -95,15 +111,6 @@ Class Core
 		if (is_array($val)) $val = serialize($val);
 		if ($lifetime==1) $lifetime = time()+315360000;	// 10 years
 		return setcookie($name, $val, $lifetime);
-	}
-	private function _hook_var(&$scope, $name, $val)
-	{
-		$HOOK = self::HOOK_VAR;
-        if (!isset($scope[$HOOK])) $scope[$HOOK]=array();
-        if (!isset($val)) return isset($scope[$HOOK][$name])?$scope[$HOOK][$name]:null;
-        if ($val=='clear') $val=null;
-        if ($val=='reset') $val='';
-        return $scope[$HOOK][$name]=$val;
 	}
     /** Unique number generator **/
     public function sequence($offset=0, $schema=null)
@@ -246,6 +253,48 @@ Class Core
 				return false;
 		}
 	}
+	/*** int benchmark(string $point[, bool $start=false])
+	 *	@description	setter/getter benchmark timestamp
+	 *	@input	$point	pinter name, mostly like 'model::handler' for component benchmarking
+	 *			$start	true for start a new benchmark watching, false to end benchmark and return end timestamp in ms.
+	 @	@return	start timestamp in ms for starting, end timestamp in ms
+	***/
+	protected function benchmark($point, $start=false)
+	{
+		$benchmark = $this->globals(self::HOOK_BENCHMARK);
+		$timestamp = microtime(true);
+		if ($start) {
+			$benchmark[$point] = array('start'=>$timestamp,'end'=>0);
+			$this->globals(self::HOOK_BENCHMARK, $benchmark);
+		} else {
+			if (!isset($benchmark[$point])||!isset($benchmark[$point]['start'])) return 0;
+			$benchmark[$point]['end'] = $timestamp;
+			$this->globals(self::HOOK_BENCHMARK, $benchmark);
+		}
+		return $timestamp;
+	}
+	/*** void benchmark_log()
+	 *	@description write benchmark data in globals into log file
+	***/
+	protected function benchmark_log()
+	{
+		$benchmark = (array)$this->globals(self::HOOK_BENCHMARK);
+		$file_name = 'benchmark/'.$this->env('DOMAIN');
+		$total = $max = 0;
+		$big = null;
+		foreach ($benchmark as $point=>$rec) {
+			$live = $rec['end']-$rec['start'];
+			$total += $live;
+			if ($live>$max) {
+				$max = $live;
+				$big = $point;
+			}
+			$mesg = sprintf("%s\t%s,%s,%s", $point, $rec['start'], $rec['end'], $live);
+			$this->logging($mesg, $file_name);
+		}
+		$mesg = sprintf("Total use %s ms in request %s\tBiggest point: %s use %s ms.", $total, $this->env('PATH'), $big, $max);
+		$this->logging($mesg, $file_name);
+	}
 	/*** get dependency defined in class
 	 *	@input	$class_name	optional, check if class_name is defined in dependency
 	 *	@return mix	
@@ -282,7 +331,7 @@ Class Core
 		// $zone = get_class($this);
 		if (!in_array($class_name, array_keys($this->dependencies))) $this->error("Error! the class $class_name is not defined in dependency array of ".get_class($this));
 		if (!$name) $name = substr($class_name, strlen(self::PREFIX_LIB)); //remove prefix header
-		$libraries = $this->global_store(self::HOOK_LIB);
+		$libraries = $this->globals(self::HOOK_LIB);
 		$lib = null;
 		if (isset($libraries[$class_name])) {
 			$lib = $libraries[$class_name];
@@ -292,7 +341,7 @@ Class Core
 				$this->error('Error Code:'.$error['error_code'].' '.$error['error']);
 			}
 			$libraries[$class_name] = $lib;
-			$this->global_store(self::HOOK_LIB, $libraries);
+			$this->globals(self::HOOK_LIB, $libraries);
 		}
 		if (!isset($this->lib)) $this->lib = new stdClass();
 		if ($force||!isset($this->lib->$name)) {
@@ -305,14 +354,14 @@ Class Core
 	/*** loading model and put it on hook **/
 	protected function load_model($model_name, $stream=null)
 	{
-        $models = $this->global_store(self::HOOK_MODEL);
+        $models = $this->globals(self::HOOK_MODEL);
         $model = null;
         if (isset($models[$model_name])) {
             $model = $models[$model_name];
         } else {
             $model = new $model_name($this->conf, $stream);
             $models[$model_name] = $model;
-            $this->global_store(self::HOOK_MODEL, $models);
+            $this->globals(self::HOOK_MODEL, $models);
         }
 		if ($stream) $model->stream = $stream;
 		return $model;
@@ -460,22 +509,13 @@ Class Core
         $data = array($hour, $min, $sec, $hour>12?($hour%12):$hour, $hour>=12?'pm':'am');
         return str_replace($src, $data, $format);
     }
-	/*** set logging for specific command ***/
-	public function record($cmd, $zone='debug')
-	{
-		if ($cmd) {
-        	ob_start();
-			return;
-		}
-        $content = ob_get_contents();
-        ob_end_clean();
-		self::logging($content, $zone);
-		return;
-	}
-	/*** logging message for debug ***/
+	/*** logging message into log file ***/
 	public function logging($message, $zone='debug')
 	{
-		$log_file = $this->conf['global']['log_dir']."/$zone.log";
+        $log_dir = isset($this->conf['global']['log_dir'])?$this->conf['global']['log_dir']:"/var/tmp/log";
+		$log_file = "$log_dir/$zone.log";
+		$dir = dirname($log_file);
+		if (!is_dir($dir)) mkdir($dir, 0700, true);
 		$message = sprintf("%s\t%s\n", date('Y-m-d H:i:s'), $message);
 		error_log($message, 3, $log_file);
 		return;
@@ -593,24 +633,13 @@ Class Core
 	***/
 	public function get_lib($lib_full_name, $load_on_fly=true)
 	{
-        $libraries = $this->global_store(self::HOOK_LIB);
+        $libraries = $this->globals(self::HOOK_LIB);
         if (isset($libraries[$lib_full_name])) return $libraries[$lib_full_name];
 		if (!$load_on_fly) return null;
 		$lib_file = $this->bean_file($lib_full_name);
 		return file_exists($lib_file)?$this->load_lib($lib_full_name):false;
 	}
 
-	/** Global Data Storage **/
-	protected function global_store($name, $val=null)
-	{
-		$HOOK = 'W3S';
-		if (!isset($val)) return @$GLOBALS[$HOOK][$name];
-		if (!$val&&isset($GLOBALS[$HOOK][$name])) {
-			unset($GLOBALS[$HOOK][$name]);
-		} else {
-			$GLOBALS[$HOOK][$name] = $val;
-		}
-	}
 	/*** string bean_file(string $class_name) ***
 	 *	@description	get file for given bean class (model or library)
 	 *	@input	string $class_name

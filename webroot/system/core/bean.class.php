@@ -94,11 +94,11 @@ class Model extends Web
 	protected function language_tag($tag)
 	{
 		if (!$language=$this->cookie('language')) $language='en';
-		if (!$dics=$this->global_store(self::HOOK_LANGUAGE)) {
+		if (!$dics=$this->globals(self::HOOK_LANGUAGE)) {
 			$dic_file = APP_DIR.'/conf/languages/'.$language.'.ini';
 			if (file_exists($dic_file)) {
 				$dics = parse_ini_file($dic_file);
-				$this->global_store(self::HOOK_LANGUAGE, $dics);
+				$this->globals(self::HOOK_LANGUAGE, $dics);
 			} else {
 				$dics = array();
 			}
@@ -139,7 +139,11 @@ class Model extends Web
         // check cacke first
         $content = $this->cache($stream['cache_handler']);
         if (!$content) {
-            // no caching or expired
+            // fresh loading
+			if (isset($this->conf['global']['benchmark'])&&$this->conf['global']['benchmark']) {
+				$watch_point = $stream['model'].'::'.$stream['method'];
+				$this->benchmark($watch_point, true);
+			}
 			$app = $this->load_model($stream['model']);
 			$orig_stream = $app->stream;
 			$app->stream = $stream;
@@ -152,6 +156,10 @@ class Model extends Web
                 $app->cache($stream['cache_handler'], $content, intval($stream['cache']));
             }
 			$app->stream = $orig_stream;
+			if (isset($watch_point)) {
+				$this->benchmark($watch_point);
+				if ($output) $this->benchmark_log();
+			}
         }
 		return  $output?$app->output($content, @$stream['format']):$content;
 	}
@@ -317,7 +325,7 @@ class Library extends Core
 		if (!is_object($hook)) $hook = new stdClass();
 		list($dsn_name, $schema) = preg_split("/[\.\/]/", $dsn);
 		$s_hook = "$dsn_name.$schema";
-        $libraries = $this->global_store(CORE::HOOK_DB);
+        $libraries = $this->globals(CORE::HOOK_DB);
 		if (isset($libraries['db'][$s_hook])) {
 			$hook->db = $libraries['db'][$s_hook];
 		} elseif (isset($this->conf['database'][$dsn_name])) {
@@ -332,7 +340,7 @@ class Library extends Core
 			}
 			include_once($driver_file);
 			$libraries['db'][$s_hook] = new $dbdriver($conf);
-			$this->global_store(CORE::HOOK_DB, $libraries);
+			$this->globals(CORE::HOOK_DB, $libraries);
 			$hook->db = $libraries['db'][$s_hook];
 		} else {
 			$this->error("Error! Invalid DSN: $conf.");
