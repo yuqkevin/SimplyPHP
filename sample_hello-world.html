@@ -44,75 +44,42 @@
 		<p>No database needed in this case.</p>
         <h3>Bean & Component</h3>
 		<ul><li><strong>Bean</strong>
-			<p>Root Bean: For our convenience, we create a bean named <strong>sample</strong> to contain all samples.
+			<p>Root Bean: For our convenience, we want to put all samples into a same folder like "sample",  so we will create a bean <strong>Sample</strong> to contain all samples.
 <pre>
 cd <em>document_root</em>/system/app/resource/beans
-mkdir sample
-cd sample
-vi model.class.php
-# lib class can be omitted in this case which has no db access
-vi lib.class.php
+# create bean "Sample" using bean creator provided with the package:
+./create_bean.php Sample
 </pre>
-model.class.php
+All bean files will be created under folder "sample".</p>
+<p>Now we start prepare for bean "SampleHello":
 <pre>
-&lt;?php
-class Sample extends Model
-{
-}
+# create bean "SampleHello", the bean name must be CamelCased!!!
+./create_bean SampleHello
 </pre>
-lib.class.php (optional in this case which has no db access)
-<pre>
-&lt;?php
-class LibSample extends Library
-{
-}
-</pre>
-At this moment we haven't defined any method in classes above.
-					</p>
-				<ul>
-					<li>Child Bean: We will create a child bean <strong>hello</strong> under the bean <strong>sample</strong>:
-<pre>
-# create sub-bean hello
-mkdir hello
-cd hello
-# create model and lib class
-vi model.class.php
-# lib class can be omitted in this case which has no db access
-vi lib.class.php
-</pre>
-model.class.php
-<pre>
-&lt;?php
-class SampleHello extends Sample
-{
-}
-</pre>
-lib.class.php (optional in this case which has no db access)
-<pre>
-&lt;?php
-class LibSample extends LibSample
-{
-}
-</pre>
-					</li>
-				</ul></li>
+The folder "hello" will be created under folder sample and bean files will created under sample/hello as well.</p>
+			</li>
 			<li><strong>Component</strong>
 				<p>Now we are going to define the component for request of "hello world":<br>
 				&lt;Model, Handler, View&gt; = &lt;SampleHello, world, view/world.tpl.php&gt;
 <pre>
-# create handler folder
-mkdir handler
-# handler file: 
-# world.inc.php can be omitted in this case which has no logic process.
-touch handler/world.inc.php
-# create view folder
-mkdir view
+cd sample/hello
+# edit handler file: 
+vi handler/world.inc.php
+</pre>
+world.inc.php
+<pre>
+<?php
+// all data binding to view will be store in $this->stream['data']
+$this->stream['data']['timestamp'] = date('Y-m-d H:i');
+?>
+</pre>
+<pre>
 # edit view
 vi view/world.tpl.php
 </pre>
 view/world.tpl.php
 <pre>
-Hello World!
+Hello World at <?php print $timestamp;?>!
 </pre>
 				</p>
 			</li>
@@ -125,7 +92,7 @@ beans/--+--sample/--+--model.class.php,lib.class.php
                     |
                     +--hello/--+--model.class.php,lib.class.php
                                |
-                               +--handler/
+                               +--handler/ --+-- world.inc.php
                                |
                                +--view/--+--world.tpl.php
 </pre>
