@@ -68,10 +68,10 @@ vi handler/world.inc.php
 </pre>
 world.inc.php
 <pre>
-<?php
-// all data binding to view will be store in $this->stream['data']
-$this->stream['data']['timestamp'] = date('Y-m-d H:i');
-?>
+&lt;?php
+// all data binding to view will be store in $this-&gt;stream['data']
+$this-&gt;stream['data']['timestamp'] = date('Y-m-d H:i');
+?&gt;
 </pre>
 <pre>
 # edit view
@@ -79,7 +79,7 @@ vi view/world.tpl.php
 </pre>
 view/world.tpl.php
 <pre>
-Hello World at <?php print $timestamp;?>!
+Hello World at &lt;?php print $timestamp;?&gt;!
 </pre>
 				</p>
 			</li>

@@ -65,13 +65,10 @@ prefix  = "post_"
 		</ul>
         <h3>Bean & Component</h3>
 		<p>We will create a child bean <strong>gbook</strong> under the bean we previously created <strong>sample</strong>.</p>
-		<ul><li><strong>File Preparing</strong>
+		<ul><li><strong>Initializing the bean</strong>
 			<pre>
-mkdir gbook
-cd gbook
-touch model.class.php lib.class.php
-mkdir database handler view
-touch database/db.sql database/db.tbl.ini
+cd app/resource/bean
+./create_bean.php Gbook
 # edit db.sql and db.tbl.ini with content in Database section
 vi database/db.sql database/db.tbl.ini
 			</pre>
