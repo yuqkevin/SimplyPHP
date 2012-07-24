@@ -687,7 +687,7 @@ Class Core
 		foreach ($post as $k=>$v) {
 			if ($key&&$k!==$key) continue;
 			if (is_array($v)) {
-				for ($i=0; $i<count($v); $i++) $post[$k][] = trim($magic?stripslashes($v[$i]):$v[$i]);
+				foreach ($v as $i=>$sv) $post[$k][$i] = trim($magic?stripslashes($sv):$sv);
 			} else {
 				$post[$k] = trim($magic?stripslashes($v):$v);
 			}
