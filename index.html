@@ -36,26 +36,35 @@
 
 		<h3>Features</h3>
 		<ul><li>Scalable multi-tier architecture</li>
-			<li>MVC pattern</li>
-			<li>Component-oriented UI
-				<ul><li>Every request (URL) maps to a particular component</li>
-					<li><strong>Page</strong> is composed of <strong>Component</strong>(s) in <strong>Layout</strong> frame</li>
+			<li>Simple UI Logic: Everything is component!
+				<ul>
+					<li><strong>Page</strong> is component, <strong>Widget</strong> is component as well.</li>
+					<li>A <strong>Component</strong> can contain other components.</li>
+					<li>Every request (URL) maps to a particular component, no matter it is a regualar request for page or an ajax request for widget.</li>
 				</ul>
 			</li>
-			<li>Business-oriented logic structure: All components are organized in business logic structures - Bean</li>
-			<li>ORM support: You can use Active Record pattern to access database</li>
-			<li>Table Object: Basis of implement of Active Record Patten and more powerful DB access</li>
-			<li>Easy configuration: PHP-style configuration file</li>
-			<li>Cache: Component Level caching control and support multiple cache engines.
-			<li>Simple and Straightforward: learning to write database-driven application in 15 minutes!</li>
+			<li>MVC pattern but more powerful:
+				<ul><li><strong>Controller</strong> is no longer a place where developer play around. It a tiny pice and shared by all applications.</li>
+					<li><strong>View</strong> keeps the traditional definition and is presentation wrapper of data from <strong>Model</strong></li>
+					<li><strong>Model</strong> is data processor for client request. It is a <strong>Application-Oriented</strong> middleware.</li>
+					<li><strong>Library</strong> is data service provider. It is <strong>Business-Oriented</strong> and based on database support.</li>
+				</ul>
+			</li>
+			<li>Excellent application encapsulation: Application is a <strong>SimplyPHP Bean</strong> and has unique entrance in system application structure: <strong>The SimplyPHP Bean Tree</strong>.</li>
+			<li>ORM Access: Support Active Record pattern and <strong>Table Object</strong> to access database</li>
+			<li>Easy configuration: PHP-style configuration files</li>
+			<li>Cache: Component Level caching control and support multiple cache engines.</li>
+			<li>Multi-level <strong>Access Control</strong>: Model, Component and Action</li>
+			<li>The simplest RAD PHP framework: learning to write database-driven application in minutes!</li>
 		</ul>
 
 		<h3>Key Concepts</h3>
-		<ul><li><strong>MVC</strong><p>In SimplyPHP, <strong>Model</strong> is the core class dealing with client request. It is <strong>Component</strong> oriented, retrieving application data based on client request and invoked by <strong>Controller</strong> only.</p>
-				<p>The <strong>View</strong> is presentation wrapper of data retrieved by <strong>Model</strong>.</p>
-				<p>The <strong>Controller</strong> is minimized in SimplyPHP and not for cumstomizing. But it is the only interface to invoke and boot the application <strong>Model</strong>.</p>
-			</li>
+		<ul>
 			<li><strong>Component</strong><p>It is a function unit in UI. Page is a complex component which may contain multiple components. Every component is mapped to a pair of &lt;<strong>Model</strong>, <strong>Handler</strong>&gt;. From programmer's point of view, the <strong>Component</strong> is also an included handler within <strong>Model</strong>. So sometimes we also call handler as <strong>Method</strong>.</p><p>In SimplyPHP, <strong>All requests are component request</strong>. The typical SimplyPHP request is something like <em>http://yourappdomain.com/ModelName/HandlerName/...</em></p></li>
+			<li><strong>SimplyPHP Bean</strong><p>A folder which contains Model, View and Library for the particular application. It implenents <strong>Application Encapsulation</strong>.	</p>
+				<p>Both <strong>Model</strong> and <strong>Library</strong> are object-oriented module, <strong>Model</strong> is request-oriented and can be inherited but can not be shared by other Models.
+				<strong>Library</strong> is business-oriented, can be inherited and be shared by other Models and libraries.</p>
+			</li>
 			<li><strong>Bean</strong><p>It is a structure contains files for particular application: Model(components), Library(business logic) and Database definition(tables).</p></li>
 			<li><strong>Table Object</strong><p>In SimplyPHP, table (or view) which is defined in bean will be converted to object and hooked at <strong>Table Object Hook</strong> automatically when the <strong>Library</strong> is loaded. <strong>Record</strong> is associative array. <strong>Filter</strong> for searching is assorciative array. <strong>Record Set</strong> is linear array of <strong>Record</strong>. <strong>CURD</strong> are basic methods of <strong>Table Object</strong>, no SQL needed for typical query.</p></li>
 		</ul>
