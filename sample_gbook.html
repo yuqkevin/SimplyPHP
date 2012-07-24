@@ -74,14 +74,14 @@ vi database/db.sql database/db.tbl.ini
 			</pre>
 			</li>
 			<li><strong>Business Logic In Library: Message Operations</strong>
-				<p>Since we have defined database in db.tbl.ini, the <strong>Table Object</strong> for each database table will be automatically loaded and hooked with name as defined under library object's table hook ($this->tbl) when library is loaded. And all CURD can be easily done by calling corresponding method (See example in following lib.class.php).</p>
+				<p>Since we have defined database in db.tbl.ini, the <strong>Table Object</strong> for each database table will be automatically loaded and hooked with name as defined under library object's table hook ($this-&gt;tbl) when library is loaded. And all CURD can be easily done by calling corresponding method (See example in following lib.class.php).</p>
 				<p>In library (lib.class.php) we need two functions for post (message): post searching and operations handler for single post.</p>
 lib.class.php:
 <pre>
 &lt;?php
 class LibSampleGbook extends LibSample
 {
-    function post($act, $id, $param=null)
+    public function post($act, $id, $param=null)
     {
         if (!$id&&$act!='create') {
             $this->error("No message given for operating.");
@@ -89,46 +89,46 @@ class LibSampleGbook extends LibSample
         }
         switch ($act) {
             case 'read':
-                return $this->tbl->gbook-><strong>read</strong>($id);
+                return $this-&gt;tbl-&gt;gbook-&gt;<strong>read</strong>($id);
                 break;
             case 'create':
-                return $this->tbl->gbook-><strong>create</strong>($param);
+                return $this-&gt;tbl-&gt;gbook-&gt;<strong>create</strong>($param);
                 break;
             case 'update':
-                return $this->tbl->gbook-><strong>update</strong>($id, $param);
+                return $this-&gt;tbl-&gt;gbook-&gt;<strong>update</strong>($id, $param);
                 break;
             case 'delete':
-                return $this->tbl->gbook-><strong>delete</strong>($id);
+                return $this-&gt;tbl-&gt;gbook-&gt;<strong>delete</strong>($id);
                 break;
         }
         return false;
     }
     function search($filter, $suffix=null)
     {
-        return $this->tbl->gbook-><strong>search</strong>($filter, $suffix);
+        return $this-&gt;tbl-&gt;gbook-&gt;<strong>search</strong>($filter, $suffix);
     }
 }
 </pre>
 			<p>Or if you are used to Active Record pattern, you can re-write post() as following as well:</p>
 <pre>
-    function post($act, $id, $param=null)
+    public function post($act, $id, $param=null)
     {
         if (!$id&&$act!='create') {
-            $this->error("No message given for operating.");
+            $this-&gtp;error("No message to save.");
             return false;
         }
 		// instantiate record with given id or empty record
-		$record =  $id?$this->tbl->gbook->load($id):?$this->tbl->gbook->new_record($param);
+		$record =  $id?$this-&gt;tbl-&gt;gbook-&gt;load($id):?$this-&gt;tbl-&gt;gbook-&gt;new_record($param);
         switch ($act) {
             case 'read':
-                return $record->attr();
+                return $record-&gt;attr();
                 break;
             case 'create':
             case 'update':
-                return $record->save()
+                return $record-&gt;save()
                 break;
             case 'delete':
-                return $record->remove();
+                return $record-&gt;remove();
                 break;
         }
         return false;
