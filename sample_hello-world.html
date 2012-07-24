@@ -99,18 +99,23 @@ beans/--+--sample/--+--model.class.php,lib.class.php
 			</li>
 		</ul>
         <h3>Access Control: Bean & Model</h3>
-		<ul><li>Enable the Bean: copy or symbol link root bean <strong>sample</strong> from app/resource/beans folder to app/beans folder
+		<ul><li>Active the Bean: copy or symbol link root bean <strong>sample</strong> from app/resource/beans folder to app/beans folder
 <pre>
 cd <em>document_root</em>/system/app/beans
 ln -s ../resource/beans/sample .
 </pre></li>
-		<li>Enable Model: We can add model SampleHello to model access array in domain configure file <em>your-simplyPHP.domain.com</em>.ini
+		<li>Enable Model in domain: Add model SampleHello to "Access" section in domain configure file <em>your-simplyPHP.domain.com</em>.ini
 <pre>
 [Access]
 model[] = SampleHello
 ; or use wildcard
 model[] = Sample*
 </pre></li>
+		<li>Remove authorization protection by setting protection to off in sample/hello/access.ini
+<pre>
+protection = Off
+</pre>
+		</li>
 		</ul>
 		<h3>Finished</h3>
 		<p>That's it!  Now you try http://<em>your_simplyphp.domain.com</em>/SampleHello/world and will get content with "Hello World!"</p>
