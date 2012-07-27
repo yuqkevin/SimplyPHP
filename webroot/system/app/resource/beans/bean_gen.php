@@ -56,15 +56,15 @@ file_put_contents("$path/database/db.sql", "/** Database Table Definition **/\n"
 $body = <<<EOT
 # Table Object Definitions
 #[table_hook_name]
-#name   = table_name
-#pkey   = field_name_of_primary_key
-#prefix = prefix_of_field_name
+#name   = "table_name"
+#pkey   = "field_name_of_primary_key"
+#prefix = "prefix_of_field_name"
 
 # schema is optional, for tables which schema is not current selected schema
-#schema = schema_name
+#schema = "schema_name"
 # following two parameters are optional, for tree structure only
-#parent = field_name_of_parent_field
-#weight = field_name_of_weight_field
+#parent = "field_name_of_parent_field"
+#weight = "field_name_of_weight_field"
 
 EOT;
 file_put_contents("$path/database/db.tbl.ini", $body);
