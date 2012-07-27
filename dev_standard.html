@@ -37,17 +37,19 @@
 			<a href="#">Dev Standard</a>
         </div>
 		<p>Before we starting our sample practice, let's clarify or build some standard rules which we will follow in practice.</p>
-		<h3>File Name: Lower Case String</h3>
-		<p>We use lower case name for all files and folders except explicitly specified.</p>
-		<h3>Class Name: Upper Camel Case String</h3>
+		<h3>Bean path and Handler file name</h3>
+		<p>Bean path has consistency with CamelCased bean name. e.g bean AclUser located at beans/Acl/User.<br />
+		   The handler name is in CamelCase as well but is always start with lowercase. e.g. groupEdit.inc.php, userEdit, ...
+		</p>
+		<h3>Class Name: CamelCased String</h3>
 		<ul>
-			<li>All class names both in Model and Library are case-sensitive and in Upper Camel Case style. e.g MyModelClass</li>
+			<li>All class names both in Model and Library are case-sensitive and CamelCased. e.g MoMyModelClass, LiMyLibClass,..., etc.</li>
 			<li>All library classes named with prefix "<strong>Lib</strong>", <br /><em>e.g. LibAcl, LibAclUser, LibSampleGbook, LibSampleBlogger, ..., etc.</em></li>
 			<li>All model classes named with prefix "<strong>Mo</strong>", but in URL, the prefix "Mo" is omitted. <br /><em>e.g. model MoAclUser's corresponding name in URL should be AclUser and vice versa.</em></li>
 			<li>The class name reflects hirarchy of file system under the bean structure.<br />
-				The first word (drop-off Lib prefix for library class) identify the bean folder (in lower case), and the followed words are sub-bean folder names (in lower case).<br />
+				The first word (without "Li","Mo" prefix) is the bean's top folder, and the followed words are sub-bean folder names (in lower case).<br />
 				   <em>For example: SampleBlogger (LibSampleBlogger) is model (library) for sub-bean <strong>blogger</strong> under bean <strong>sample</strong>.<br />
-				   The file should be located at bean/sample/blogger/model.class.php (lib.class.php)</em>
+				   The file should be located at bean/Sample/Blogger/model.class.php (lib.class.php)</em>
 			</li>
 		</ul>
 
