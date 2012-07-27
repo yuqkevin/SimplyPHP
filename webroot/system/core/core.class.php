@@ -648,7 +648,7 @@ Class Core
 	***/
 	protected function bean_file($class_name, $active=true)
 	{
-	    $path = preg_split("/\//", strtolower(preg_replace("/([a-z0-9])([A-Z])/", "\\1/\\2", ucfirst($class_name))));
+	    $path = preg_split("/\//", preg_replace("/([a-z0-9])([A-Z])/", "\\1/\\2", ucfirst($class_name)));
 		$path[0] = ucfirst($path[0]);
 	    if ($path[0]===self::PREFIX_LIB) {
         	$class_file = 'lib.class.php';

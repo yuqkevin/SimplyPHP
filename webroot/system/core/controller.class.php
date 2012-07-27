@@ -13,7 +13,7 @@
 //
 function __autoload($class)
 {
-    $path = preg_split("/\//", strtolower(preg_replace("/([a-z0-9])([A-Z])/", "\\1/\\2", $class)));
+    $path = preg_split("/\//", preg_replace("/([a-z0-9])([A-Z])/", "\\1/\\2", $class));
 	$path[0] = ucfirst($path[0]);
     if ($path[0]===Core::PREFIX_LIB) {
         $file = null;

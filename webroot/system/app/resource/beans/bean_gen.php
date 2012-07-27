@@ -18,7 +18,7 @@ $class_name = ucfirst($bean_name);
 $timestamp = date("Y-m-d H:i");
 $user = get_current_user();
 // create folder for bean
-$path = strtolower(preg_replace("/([A-Z])/", "/\\1", $bean_name));
+$path = preg_replace("/([A-Z])/", "/\\1", $bean_name);
 if ($path[0]==='/') $path=substr($path,1);
 
 if (is_dir($path)) {
