@@ -5,7 +5,7 @@
 ***/
 $user = $this->get_lib('LibAclUser');
 $id = intval($this->request('id'));
-$token_key = $this->token_key().$id;
+$token_key = $this->key_gen().$id;
 $act = $this->s_decrypt($this->request('token'), $token_key);
 if (!$timestamp=$this->request('timestamp')) $timestamp = time();
 
@@ -15,7 +15,6 @@ switch ($act) {
     case 'create':
     case 'edit':
         $operator = $this->user_info();
-        $ui = $this->load_lib('LibUiHtml');
         if ($act==='create') {
             $this->stream['data']['token'] = $this->s_encrypt('update', $token_key);
 			$group_actions = array();

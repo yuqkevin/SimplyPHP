@@ -17,43 +17,9 @@ class LibAclUser extends LibAcl
 	const	EMAIL_VERIFIED = '1';
 	const	EMAIL_UNVERIFIED = '0';
 
-	/*** Database initializing ***/
-	function db_initial($passwd)
-	{
-        $this->status['error_code'] = 'INITIAL_FAILURE';
-        $this->status['error'] = "Failed to initial AclUser database.";
-		if (!$passwd) {
-			$this->status['error'] = "You must set initial password for system account.";
-			return false;
-		}
-		if ($this->tbl->account->read(self::DNA_SYS)) {
-			$this->status['error'] = "System account already exists.";
-			return false;
-		}
-		// domain
-		$domain = array('id'=>1,'name'=>$this->env('DOMAIN'),'dna'=>self::DNA_SYS, 'status'=>self::DOMAIN_VERIFIED);
-		if (!$domain_id=$this->tbl->domain->create($domain)) {
-			$this->status['error'] = "Failed to create domain.";
-			return false;
-		}
+	const	USER_SESSION_AUTH = Core::USER_SESSION_AUTH;	// using core session define so can share core::user_info();
+	const	USER_SESSION_HOOK = 'LibAcl::USER_SH';
 
-		$group_id = self::GROUP_SYS;
-		$group = array('id'=>$group_id,'dna'=>self::DNA_SYS,'domain'=>$domain_id,'name'=>'System');
-		if (!$this->tbl->group->create($group)) {
-			$this->status['error'] = "Failed to create group.";
-			$this->tbl->domain->delete($domain_id);
-			return false;
-		}
-
-		$user = array('id'=>self::DNA_SYS,'login'=>'administrator','group'=>$group_id,'domain'=>$domain_id,'dna'=>self::DNA_SYS,'pass'=>md5($passwd),'comments'=>"Init PWD:$passwd",'creator'=>0);
-		if (!$this->tbl->account->create($user)) {
-			$this->status['error'] = "Failed to create user.";
-			$this->tbl->group->delete($group_id);
-			$this->tbl->domain->delete($domain_id);
-			return false;
-		}
-		return $this->sign_in('administrator', $passwd);
-	}
 	/*** bool sign_in(string $name, string $pass)
 	 *	@description	Verify user's identification
 	 *	@input	$name	User Login ID (email address in lower cases usually)
@@ -74,12 +40,14 @@ class LibAclUser extends LibAcl
 				$user['group'] = $this->tbl->group->read($user['group']);
 				$user['group']['action'] = $this->unserialize($user['group']['action']);
 				if ($user['group']['id']!=self::GROUP_SYS) {
-					//check access domain
-					$domain = $this->tbl->domain->read($user['group']['domain']);
-					if ($this->env('DOMAIN')!==$domain['name']) {
-						$this->status['error_code'] = 'INVALID_ACCESS_DOMAIN';
-						$this->status['error'] = "User has no access on this domain.";
-						return false;
+					//check access domain if user has a domain setting
+					if ($user['domain']) {
+						$domain = $this->tbl->domain->read($user['group']['domain']);
+						if ($this->env('DOMAIN')!==$domain['name']) {
+							$this->status['error_code'] = 'INVALID_ACCESS_DOMAIN';
+							$this->status['error'] = "User has no access on this domain.";
+							return false;
+						}
 					}
 					// set user account scope
 					$user['scope'] = $user['id']==$user['dna']?'primary':'regular';
@@ -279,5 +247,103 @@ class LibAclUser extends LibAcl
 			$operator_dna = $operator['dna'];
 		}
 		return $obj_dna===$operator_dna;
+	}
+	/*** mix session_hook(string $name[,mix $val])
+	 *	@description	Setting/Getting user variables in session other than user_session
+	 *	@input	$name	variable name, 'clear','reset' are reserved for clean session
+	 *			$val	value of variable
+	 *	@return value of variable or true if success, false for failure
+	***/
+	public function session_hook($name, $val=null)
+	{
+		if (in_array($name, array('clear','reset'))&&!$val) return $this->session(self::USER_SESSION_HOOK, 'reset');
+		$session = $this->session(self::USER_SESSION_HOOK);
+		if (!isset($val)) return @$session[$name];
+		$session[$name] = $val;
+		$this->session(self::USER_SESSION_HOOK, $session);
+		return $val?$val:true;
+	}
+
+	/*** mix user_session(string $act[, mix $val])
+	 *	@description	Apply action on user authentication session
+	 *	@input	$act	Action name
+	 *			$val	array for session update, int for session lifetime verifying
+	 *	@return	array for session value if success, false for failure
+	***/ 
+	public function user_session($act, $val=null)
+	{
+		switch ($act) {
+			case 'new':
+				$data = array(
+					'ip'=>$this->env('REMOTE_ADDR'),
+					'url'=>$this->env('PATH'),
+					'user'=>$val['id'],
+					'action'=>'0'
+				);
+				$this->user_session('close');
+				$this->tbl->session->create($data);
+				$val['timestamp'] = time();
+				$val['data'] = array('url'=>array($this->env('PATH')));
+				$val['step'] = 0;
+				$this->session(self::USER_SESSION_AUTH, $val);
+				return $val;
+				break;
+			case 'set': // set with given value
+				$this->session(self::USER_SESSION_AUTH, $val);
+				return $val;
+				break;
+			case 'get':
+				return $this->session(self::USER_SESSION_AUTH);
+				break;
+			case 'close': // clear, set value to null
+				if (!$session=$this->session(self::USER_SESSION_AUTH)) return true;
+				$urls = $session['data']['url'];
+				array_pop($urls);
+				unset($session['data']['url']);
+				$data = array(
+					'ip'=>$_SERVER['REMOTE_ADDR'],
+					'url'=>end($urls),
+					'user'=>$session['id'],
+					'action'=>'1',
+					'data'=>serialize($session['data']),
+				);
+				$this->tbl->session->create($data);
+				$this->session_hook('clear'); // wipe out user's other session as well
+				return $this->session(self::USER_SESSION_AUTH, 'reset');
+				break;
+			case 'refresh': // refresh with given parameters
+				if (is_array($val)&&($session=$this->session(self::USER_SESSION_AUTH))) {
+					foreach ($val as $k=>$v) $session[$k] = $v;
+					$session['timestamp'] = time();
+					$this->session(self::USER_SESSION_AUTH, $session);
+					return $session;
+				}
+				return false;  // no session to refresh
+				break;
+			case 'verify': // verify session and refresh timestamp if applied.
+				if ($session=$this->session(self::USER_SESSION_AUTH)) {
+					if (isset($session['timestamp'])) {
+						if ($val&&$val<(time()-$session['timestamp'])) {
+							$this->status['error_code'] = 'SESSION_EXPIRED';
+							$this->status['error'] = 'Session has been expired.';
+							return false;
+						}
+						$session['timestamp'] = time();
+					}
+					$session['step'] ++;
+					// record last two step urls
+					$urls = $session['data']['url'];
+					if (count($urls)>1) array_shift($urls);
+					array_push($urls, $this->env('PATH'));
+					$session['data']['url'] = $urls;
+					$this->session(self::USER_SESSION_AUTH, $session);
+					return $session;
+				} else {
+					$this->status['error_code'] = 'SESSION_NOT_EXISTS';
+					$this->status['error'] = "Session does not exists.";
+				}
+				return false;
+				break;
+		}
 	}
 }

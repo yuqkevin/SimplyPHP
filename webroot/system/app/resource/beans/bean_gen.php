@@ -10,6 +10,9 @@ Notice: beanName should be in camel case if it is a sub-bean.
 
 EOT;
 	exit;
+} elseif (preg_match("/\W/", $bean_name)) {
+	echo "\nError!!! the bean name should be in CamelCase with alphabet and numeric characters only.\n\n";
+	exit;
 }
 $class_name = ucfirst($bean_name);
 $timestamp = date("Y-m-d H:i");
@@ -36,6 +39,14 @@ Failure!!!
 EOT;
 	exit;
 }
+
+if (strpos($path, '/')!==false) {
+	$parent = str_replace(' ','', ucwords(str_replace('/',' ', dirname($path))));
+	$parent = array('model'=>'Mo'.$parent,'lib'=>'Li'.$parent);
+} else {
+	$parent = array('model'=>'Model','lib'=>'Library');
+}
+
 foreach (array('database','handler','view') as $folder) mkdir("$path/$folder");
 
 // create files
@@ -65,7 +76,7 @@ $body = <<<EOT
  *   Create: $timestamp
  *   Author: $user
 ***/
-class Mo$class_name extends Model
+class Mo$class_name extends {$parent['model']}
 {
 	protected \$dependencies = array();
 }
@@ -78,7 +89,7 @@ $body = <<<EOT
  *   Create: $timestamp
  *   Author: $user
 ***/
-class Lib$class_name extends Library
+class Lib$class_name extends {$parent['lib']}
 {
     protected \$dependencies = array();
 }
@@ -90,12 +101,11 @@ $body = <<<EOT
 ; Component and action definitions and access control
 [MODEL::]
 ; model class name in camelcase
-name = "$class_name"
+name = "Mo$class_name"
 ; description of the model
 description = ""
-
 ; protection option, omitted or set to Off will be disable the model's proctection, that means the model is public accessible.
-; values On/Off/"full": Off: public access; On: only listed handlers can be protected; "full":all handlers are protected
+; values: Off: public access; On: only listed handlers can be protected; "full":all handlers are protected
 protection = "full"
 
 [HANDLER::]

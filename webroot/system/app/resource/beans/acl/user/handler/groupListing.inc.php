@@ -4,7 +4,7 @@
 ***/
 $user = $this->get_lib('LibAclUser');
 $session_id = $this->session('id');
-$token_key = $this->token_key();
+$token_key = $this->key_gen();
 $user_info = $this->user_info();
 if (!$token=$this->request('token')) {
     // listing

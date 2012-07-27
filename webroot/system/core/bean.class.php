@@ -261,6 +261,48 @@ class Model extends Web
 		}
 		return $beans;
 	}
+    protected function hasharray_options($lines, $field_key, $field_val=null, $in=null)
+    {
+        $result = null;
+        foreach ((array)$lines as $line) {
+            $result .= sprintf("<option value=\"%s\" %s>%s</option>\n",
+                htmlspecialchars($line[$field_key]), strcmp($line[$field_key],$in)===0?'selected':null, htmlspecialchars($line[isset($field_val)?$field_val:$field_key]));
+        }
+        return $result;
+    }
+    protected function hash_options($status_list, $status = null)
+    {
+        $result = null;
+        foreach ($status_list as $val => $name) {
+           $result .= sprintf("<option value=\"%s\" %s>%s</option>\n",
+                      $val, strcmp($val,$status)===0? 'selected': null, htmlspecialchars($name));
+        }
+        return $result;
+    }
+    protected function array_options($array, $in=null)
+    {
+        $opt = null;
+        foreach ($array as $item) {
+           $opt .= sprintf("<option value=\"%s\" %s>%s</option>", htmlspecialchars($item),strcmp($item,$in)===0? 'selected':null, htmlspecialchars($item));
+        }
+        return $opt;
+    }
+    public function group_options($lines, $field_key, $field_val, $field_category, $in=null)
+    {
+        $grp_options = null;
+        $cate_flag = 0;
+        foreach ($lines as $line) {
+            if ($line[$field_category]) {
+                if ($cate_flag) $grp_options .= "</optgroup>\n";
+                $cate_flag = $line[$field_category];
+                $grp_options .= sprintf("<optgroup label=\"%s\">", htmlspecialchars($line[$field_val]));
+            } else {
+                $grp_options .= sprintf("<option value=\"%s\" %s>%s</option>", $line[$field_key], strcmp($line[$field_key],$in)===0?'selected':null, htmlspecialchars($line[$field_category]));
+            }
+        }
+        if ($cate_flag) $grp_options .= "</optgroup>\n";
+        return $grp_options;
+    }
 }
 // Root for application libraries.
 // All application libraries should use namespace under Library
