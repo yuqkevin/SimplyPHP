@@ -516,23 +516,22 @@ Class Core
 		error_log($message, 3, $log_file);
 		return;
 	}
-	/*** error handler: exit with logging error in details ***/
-	public function error($err=null)
+	/*** void error(string $err[, bool $traceback=false])
+	 *	@description	Developer-Oriented error handler: logging error in details and exit
+	 *	@input	$err	Error message in string or array
+	 *			$traceback	logging debug backtrace if true, or just error message only
+	 *	@return	void
+	***/
+	public function error($err, $traceback=false)
 	{
         $errlog_dir = isset($this->conf['global']['log_dir'])?$this->conf['global']['log_dir']:"/var/tmp/log";
 		if (!is_dir($errlog_dir)) mkdir($errlog_dir, 0700, true);
-		$errlog = $errlog_dir.'/error.log';
-		$err_msg = null;
-        if ($err) {
-            $err_msg = sprintf("%s\t%s\t%s\n%s\n", date('Y-m-d H:i:s'), $_SERVER['REMOTE_ADDR'], is_array($err)?serialize($err):$err, print_r(debug_backtrace(), true));
-		} elseif ($this->status['error']) {
-			$err_msg = $this->status['error'];
-		}
-		if ($err_msg) {
-            error_log($err_msg, 3, $errlog);
-			exit("Sorry, we can not process your request at this moment. Please try again later.");
-        }
-		return;
+		$log_file = $errlog_dir.'/error.log';
+		$timestamp = date('Y-m-d H:i:s');
+        $err_msg = sprintf("%s\t%s\t%s\n%s\n", 
+			$timestamp, $_SERVER['REMOTE_ADDR'], is_array($err)?serialize($err):$err, $traceback?print_r(debug_backtrace(), true):null);
+        error_log($err_msg, 3, $log_file);
+		exit("Internal Error at $timestamp.");
 	}
 	/** unserialize given string if it is unserialized**/
 	public function unserialize($str)
@@ -631,9 +630,9 @@ Class Core
 	{
         $libraries = $this->globals(self::HOOK_LIB);
         if (isset($libraries[$lib_full_name])) return $libraries[$lib_full_name];
-		if (!$load_on_fly) return null;
+		if (!$load_on_fly) $this->error("Library '$lib_full_name' has not been loaded yet.");;
 		$lib_file = $this->bean_file($lib_full_name);
-		return file_exists($lib_file)?$this->load_lib($lib_full_name):false;
+		return file_exists($lib_file)?$this->load_lib($lib_full_name):$this->error("Library '$lib_full_name' Not Found.");
 	}
 
 	/*** string bean_file(string $class_name) ***
@@ -882,14 +881,6 @@ EOT;
 		if (ob_get_contents()) ob_flush();
         exit;
     }
-	public function error($message=null) {
-		if (!$message) {
-			// status
-			$message = $this->status['error'];
-		}
-        if ($this->conf['global']['DEBUG']) debug_print_backtrace();
-		exit($message);
-	}
     /** simple get/post method
      * @input string $url    remote url post to
      *        array  $data   associative array of post data

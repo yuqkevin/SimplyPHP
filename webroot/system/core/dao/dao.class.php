@@ -59,10 +59,14 @@ class Dao
 		if (!$dsn) $dsn = $this->dsn;
 		if ($pure_connet_flag||!$this->dbh) {
 			$dsn_str = "{$dsn['dbdriver']}:dbname={$dsn['database']};host={$dsn['hostname']};";
-			$dbh = new PDO($dsn_str, $dsn['username'], $dsn['password']);
-			$dbh->setAttribute(PDO::ATTR_CASE, PDO::CASE_LOWER);
-			if ($pure_connet_flag) return $dbh;
-			$this->dbh = $dbh;
+			try {
+				$dbh = new PDO($dsn_str, $dsn['username'], $dsn['password']);
+				$dbh->setAttribute(PDO::ATTR_CASE, PDO::CASE_LOWER);
+				if ($pure_connet_flag) return $dbh;
+				$this->dbh = $dbh;
+			} catch (Exception $e) {
+    			exit("Database connection failure: ".$e->getMessage()."\n");
+			}
 		}
 		return $this->dbh;
 	}
