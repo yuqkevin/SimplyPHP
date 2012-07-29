@@ -182,7 +182,7 @@ class Model extends Web
 	{
 		if (!$salt) $salt = $this->conf['global']['salt'];
 		$length = max(4, min(32, $length));
-		return substr(md5($this->session('id')).$salt, 0, $length);
+		return substr(md5($this->session('id').$salt), 0, $length);
 	}
 	/*** Simple Xor encrypt/decrypt using session id based key, mainly for token***/
 	protected function s_encrypt($plain_text, $key=null)
