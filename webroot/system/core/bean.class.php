@@ -35,29 +35,15 @@ class Model extends Web
 			$parent = get_parent_class($parent);
 		}
 		// then loading dependencies
-		$this->conf = isset($conf)?$conf:$this->configure();
+		$this->conf = $conf;
 		// loading libraries
 		$this->load_dependencies();
 		$this->initial();
 	}
-	/*** mix switch_to([string $url=null[, array $attr=null[,bool $output=null]]])
-	 *	@decription		loading corresponding component for given url
-	 *	@input	string	$url	using current url if url is omitted
-	 *			array	$attr	give parameters array('conf'=>array(key1=>val1,...),'param'=>array(v1,v2,...))
-	 *			bool	$output	output control, true for client side output,false for returns string
-	 *	@return	output to client if $output is true, or string if $output is false
-	***/
-	public function switch_to($url=null, $attr=null, $output=true)
+	// This method should be overrided with application's own route logic if it applied
+	public function route($url)
 	{
-        if (!$url) $url = $this->env('PATH');
-		// verify URL
-        if (!$stream=$this->mapping($url, true)) {
-            if ($output) $this->page_not_found($url);
-            return "<a title=\"$url\" style=\"color:red;\">".$this->language_tag('UNKNOWN_REQUEST')."</a>";
-        }
-		if (is_array($attr['conf'])) $stream['conf']=array_merge((array)$stream['conf'], $attr['conf']);
-		if (is_array($attr['param'])) $stream['param']=array_merge((array)$stream['param'], $attr['param']);
-		return $this->component($stream, $output);
+		$this->page_not_found($url);
 	}
 	/*** string load_component(string $model, string $method[, array $conf=null[,bool $output=false]])
 	 *	@description	Loading given component by return content in string
@@ -118,7 +104,7 @@ class Model extends Web
 	 *			bool  $output	output control, output to client if true, or returns content in string.
 	 *	@return	output to client if true, or returns content in string.
 	***/
-	protected function component($stream, $output=true)
+	public function component($stream, $output=true)
 	{
 		$error = $this->language_tag('ACCESS_DENIED');
         // Verify model visibility by configuration

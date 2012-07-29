@@ -215,11 +215,51 @@ class Dao
 		}
         return count($lines)?$lines:null;
 	}
-	/** Retrieve tree under given root (root excluded)**
-	 * deep: null whole tree, others: the level under root will be retrieved (start from 1);
+    /** array table_tree(array $table_def, int $root[, string $fields='*'[,array $filter=null]])
+     *  @description    Retrieve whole tree with given root (which is include in tree as well) without recursive method
+     *  @input  $table_def  table definition in tbl.ini, parent, weight and root must be defined in this case
+     *          $root   id of the tree root
+     *          $fields the fields set in output
+     *  @return tree nodes in array which is ordered by parent and weight
+    **/
+	public function table_single_tree($table_def, $root, $fields='*', $filter=null)
+	{
+        $prefix = strtolower(@$table_def['prefix']);
+		$filter += array($table_def['root']=>$root);
+		$suffix = array('orderby'=>array($table_def['parent']=>null,$table_def['weight']=>'desc'));
+		$lines = $this->table_search($table_def, $filter, $suffix, $fields);
+		if (!$lines) return null;
+		$nodes = array_shift($lines);
+		$next = null;
+		while (count($lines)) {
+			$line = array_shift($lines);
+			for ($i=0; $i<count($nodes); $i++) {
+				if ($nodes[$i]['id']==$line['parent']) {
+					$next = $nodes[$i]['id'];
+					$nodes[$i]['id'] = $line;
+				} elseif ($next) {
+					$tmp = $nodes[$i]['id'];
+					$nodes[$i]['id'] = $next;
+					$next = $tmp;
+				}
+			}
+		}
+		if ($next) $nodes[] = $next;
+        return $nodes;
+	}
+	/** array table_tree(array $table_def, int $root[, int $deep=null[, string $fields='*'[,array $filter=null[, int $level]]]])
+	 *	@description	Retrieve any part of tree by given node (which as root and excluded in tree) with recursive method 
+	 *	@input	$table_def	table definition in tbl.ini, parent and weight must be defined in this case
+	 *			$root	id of the tree root
+	 *			$deep null for whole tree, others: the level under root will be retrieved (start from 1);
+	 *			$fields	the fields set in output
+	 *			$level	start number in first level
+	 *	@return	tree nodes in array which is ordered by parent and weight
 	**/
     public function table_tree($table_def, $root, $deep=null, $fields='*', $filter=null, $level=1)
     {
+		// check tree retrieve type if it's a single tree retriving
+		if (isset($table_def['root'])&&!isset($deep)) return $this->table_single_tree($table_def, $root, $fields, $filter);
 		if (!$this->dbh) $this->connect();
         $table_name = $table_def['name'];
 		if (isset($table_def['schema'])) $table_name = $table_def['schema'].".$table_name";
@@ -254,6 +294,7 @@ class Dao
         }
         return $lines;
     }
+
 	/*** execute a query with question mark place holders and returns number of affected rows ***/
 	public function query($query, $param=null)
 	{
@@ -357,13 +398,12 @@ class Dao
 	protected function suffix($suffix, $prefix=null)
 	{
 		if (!$suffix||is_string($suffix)) return $suffix;
-		if ($prefix&&substr($prefix,-1)!=='_') $prefix .= '_';
 		$suffix_str = null;
 		if (isset($suffix['groupby'])&&($groupby=$suffix['groupby'])) {
 			$suffix_str .= " group by ";
 			if (is_array($groupby)) {
                 $groups = array();
-                foreach ($groupby as $key) $groups[] = strpos($key, $prefix)===0?$key:"$prefix$key";
+                foreach ($groupby as $key) $groups[] = $this->prefix($key, $prefix, 'on');
                 $groupby = join(",", $orders);
             } elseif (strpos($groupby, $prefix)!==0) {
                 $groupby = $prefix.$groupby;
@@ -497,10 +537,23 @@ class Dao
 		$jointer = $type=='set'?',':' and ';
 		return array(join($jointer, $pair), $binding);
     }
+
+	/*** mix prefix(mix $fields, string $prefix, string $onoff)
+	 *	@description	put prefix on or remove prefix from the field(s)
+	 *	@input	$fields	filed names in hash array (key=>val) for multiple fields or string for single field
+	 *			$prefix	prefix in string
+	 *			$onoff	'on' put prefix on to field, 'off' remove prefix from field
+	 *	@return	$fields with prefix options
+	***/
 	public function prefix($fields, $prefix, $onoff)
 	{
-		if (!$prefix||!is_array($fields)) return $fields;
-		if (substr($prefix, -1)==='_') $prefix = substr($prefix,0, -1);
+		if (!$prefix) return $fields;	// no prefix applied
+		if (!is_array($fields)) {
+			// single field
+			if ($onoff==='on'&&strpos($fields, $prefix)!==0) return $prefix.$fields;
+			if ($onoff==='off'&&strpos($fields, $prefix)===0) return substr($fields, strlen($prefix));
+			return $fields;
+		}
 		$hash = array();
 		foreach ($fields as $key=>$val) {
 			if (is_array($val)&&$key[0]==':') {  // special operator like '::or::'
@@ -508,9 +561,9 @@ class Dao
 				continue;
 			}
 			if ($onoff==='on') {
-				$key = $prefix.'_'.$key;
+				if (strpos($key, $prefix)!==0) $key = $prefix.$key;
 			} elseif ($onoff==='off'&&strpos($key, $prefix)===0) {
-				$key = substr($key, strlen($prefix)+1);
+				$key = substr($key, strlen($prefix));
 			}
 			$hash[$key] = $val;
 		}

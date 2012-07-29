@@ -18,15 +18,12 @@ Class Core
 	protected $status = array('class'=>null,'error'=>null,'error_code'=>null); // for cross-class info trnasfer
 	protected $conf = null;
 	protected $dependencies = null;  // array(LibClassName=>name)  invoke: this->lib->name
-	const PREFIX_MODEL = 'Mo';	// user model prefix
-	const PREFIX_LIB = 'Lib';	// user library prefix
 	const HOOK_LIB = 'library';
 	const HOOK_MODEL = 'model';
 	const HOOK_DB = 'database';
 	const HOOK_VAR = 'w3s_var';	// hook name for env vars in both session and global
 	const HOOK_GLOBAL = 'w3s_global';	// hook name in global store
 	const HOOK_BENCHMARK = 'w3s_benchmark';	// global, array(key1=>array('start'=>time,'end'=>time),key2=>....)
-	const DEFAULT_ENTRY = 'main';
 	const W3S_SEQ = 'w3s_sequence';
 	const REQUEST_SESSION = 'w3s_request';	// for input cache
 	// user session hook
@@ -35,8 +32,6 @@ Class Core
 
 	const CACHE_CLEAR_TTL = -1;	// clear specific cache
 
-
-	public function __construct(){}
 
 	/*** mix env(string $name[, mix $val[, bool $session]])
 	 *	@description:	Application Env Variable getter/setter. The variable has type of Reserved/Global/Session
@@ -330,7 +325,7 @@ Class Core
 		// dependency checking
 		// $zone = get_class($this);
 		if (!in_array($class_name, array_keys($this->dependencies))) $this->error("Error! the class $class_name is not defined in dependency array of ".get_class($this));
-		if (!$name) $name = substr($class_name, strlen(self::PREFIX_LIB)); //remove prefix header
+		if (!$name) $name = substr($class_name, strlen(PREFIX_LIB)); //remove prefix header
 		$libraries = $this->globals(self::HOOK_LIB);
 		$lib = null;
 		if (isset($libraries[$class_name])) {
@@ -470,8 +465,8 @@ Class Core
 	***/
 	public function model_name($model_name, $class=true)
 	{
-		$name = $this->class_name_format($model_name, self::PREFIX_MODEL);
-		return $class?$name:substr($name, strlen(self::PREFIX_MODEL));
+		$name = $this->class_name_format($model_name, PREFIX_MODEL);
+		return $class?$name:substr($name, strlen(PREFIX_MODEL));
 	}
 	/** keep class name in correct format. e.g. myClass -> MyClass, and add correct preifx such as Lib if it's given **/
 	public function class_name_format($str, $prefix=null)
@@ -650,10 +645,10 @@ Class Core
 	{
 	    $path = preg_split("/\//", preg_replace("/([a-z0-9])([A-Z])/", "\\1/\\2", ucfirst($class_name)));
 		$path[0] = ucfirst($path[0]);
-	    if ($path[0]===self::PREFIX_LIB) {
+	    if ($path[0]===PREFIX_LIB) {
         	$class_file = 'lib.class.php';
 	        array_shift($path);
-    	} elseif ($path[0]===self::PREFIX_MODEL) {
+    	} elseif ($path[0]===PREFIX_MODEL) {
         	$class_file = 'model.class.php';
 	        array_shift($path);
     	} else {
@@ -700,149 +695,6 @@ Class Core
 class Web extends Core
 {
 	const COMPONENT_CALL = 'component'; // url phase of ajax call for component
-	public function configure()
-	{
-		$conf_dir = APP_DIR."/conf";
-		$conf = array();
-		foreach (array('main',self::request('_DOMAIN')) as $conf_file) {
-			$file = "$conf_dir/$conf_file.ini";
-			if (file_exists($file)) {
-				$ini_rows = array_change_key_case(parse_ini_file($file, true), CASE_LOWER);
-				foreach ($ini_rows as $div=>$param) {
-					foreach ($param as $key=>$val) {
-						if (strpos($key, '.')!==false) {
-							$r = preg_split("/\./", $key, 2);
-							$sub = $r[0];
-							$k = $r[1];
-							if (isset($conf[$div][$sub][$k])&&is_array($val)) {
-								$conf[$div][$sub][$k] = array_merge($conf[$div][$sub][$k], $val);
-							} else {
-								$conf[$div][$sub][$k] = $val;
-							}
-						} else {
-							if (isset($conf[$div][$key])&&is_array($val)) {
-								$conf[$div][$key] = array_merge($conf[$div][$key], $val);
-							} else {
-								$conf[$div][$key] = $val;
-							}
-						}
-					}
-				}
-			}
-		}
-		$conf = array_change_key_case($conf,CASE_LOWER);
-		if (!$conf['global']['TIMEZONE']) {
-			// get system timezone
-			$conf['global']['TIMEZONE'] = function_exists('date_default_timezone_get')?date_default_timezone_get():'UTC';
-		}
-		// setting application timezone
-		if (function_exists('date_default_timezone_set')) date_default_timezone_set($conf['global']['TIMEZONE']);
-		if (!isset($conf['global']['ajax_frag'])) $conf['global']['ajax_frag'] = self::COMPONENT_CALL;
-		if (!isset($conf['global']['index'])) $conf['global']['index'] = Core::DEFAULT_ENTRY;
-		if (!isset($conf['route'])) {
-			$conf['route'] = array();
-		} else {
-			// overide route table with newer entrances
-			$conf['route'] = array_unique(array_reverse($conf['route']));
-		}
-		if (!isset($conf['domain'])) $conf['domain'] = array();
-		if (!isset($conf['access'])) $conf['access'] = array();
-		//$conf['access']=array_change_key_case($conf['access'],CASE_LOWER);
-		//$conf['route']=array_change_key_case($conf['route'],CASE_LOWER);
-		//$conf['domain']=array_change_key_case($conf['domain'], CASE_LOWER);
-		if (!isset($conf['access']['model'])) $conf['access']['model'] = array();
-		//for ($i=0; $i<count($conf['access']['model']); $i++) $conf['access']['model'][$i] = strtolower($conf['access']['model'][$i]);
-		if (!defined('DEBUG')&&isset($conf['global']['DEBUG'])) define('DEBUG', $conf['global']['DEBUG']); // set global constant: DEGUB
-		return $this->conf = $conf;
-	}
-    /** convert url to array without empty head or ending **/
-    protected function url2array($url)
-    {
-        if ($url=='/') return array();
-        if ($url[0]=='/') $url = substr($url, 1);
-        if (substr($url, -1)=='/') $url = substr($url, 0, -1);
-        return preg_split("|/|", $url);
-    }
-	/** mix mapping(string $url[, bool $method_check=false])
-	 *	@description Parsing URL into hash stream
-	 *	@input	string $url	url
-	 *			bool $method_check	force to check method file, give error if method file doesn't exist and method_check is set to true
-	 *	@output	array stream for valid url
-	 *			null for unknown url
-	**/
-	public function mapping($url, $method_check=false)
-	{
-		$stream = array(
-			'offset'=>null,		// matched value of pre-configure model = offset pair, it must be /somthing or null
-			'url'=>$url,		// url without offset
-			'model'=>null,		// model formal name: e.g. MoMyModel
-			'method'=>null,
-			'param'=>null,		// linear array, param from url. e.g. /user/login
-			'conf'=>null,		// component conf/initial data in hash. e.g. array('key1'=>val1,'key2'=>val2,...)
-			'model_file'=>null,
-			'method_file'=>null,  // file without suffix (e.g .inc.php or .tpl.php)
-			'view_file'=>null,		  // mostly it's same as mothod_file in ajax, but folder /model/ may be change to /view/ later in no-ajax mode, and file name may be expanded as well.
-			'comp_url'=>null,	// stake url for component call. usually like: /model/ajax_frag/method
-			'data'=>null,
-			'suffix'=>null,
-			'ajax'=>false,		// deside view's folder. view stay with handler if true, otherwise in view folder.
-			'format'=>'html'
-		);
-		$r = $this->url2array($url);
-		$url = '/'.join('/', $r);
-		$stream['url'] = $url;
-		$default=array_search('/', $this->conf['route']);
-		$index = @$this->conf['global']['index']?$this->conf['global']['index']:Core::DEFAULT_ENTRY;
-		$stream['ajax'] = in_array($this->conf['global']['ajax_frag'], $r);
-
-		// check in Model/method pattern first
-		if (count($r)>=2) {
-			$model = self::PREFIX_MODEL.array_shift($r);
-			if ($this->conf['global']['ajax_frag']==$r[0]) array_shift($r);
-			$method = isset($r[0])?array_shift($r):null;
-			if ($method) {
-				if ($component=$this->component_locator($model, $method, $stream['ajax'])) {
-					$stream = array_merge($stream, $component);
-					$stream['param'] = $r;
-					return $stream;
-				}
-			}
-		}
-
-		// check configuration route setting
-		$model = $offset = null;
-		$frags = array();
-		while (true) {
-			if ($model=array_search($url, $this->conf['route'])) {
-				$offset = $url;
-				break;
-			}
-			if ($url==='/') break;
-			array_unshift($frags, basename($url));
-			$url = dirname($url);
-		}
-		$stream['ajax'] = in_array($this->conf['global']['ajax_frag'], $frags);
-		if (!$model) {
-			// not found in route table
-			if (!count($frags)) return null;	// model defined for '/'
-			$model = self::PREFIX_MODEL.array_shift($frags);
-		}
-		if ($stream['ajax']) array_shift($frags);	// remove ajax frag
-		$method = isset($frags[0])?array_shift($frags):($stream['ajax']?null:$index);
-		if (($method_check||$stream['ajax'])&&!$method) return null;	// no method defined, method is mandatory for method checking or ajax mode
-		// verfiy the component
-		if (!$component=$this->component_locator($model, $method, $stream['ajax'])) {
-			if (!$offset) return null;	// no matched model in route configuration
-			if (get_class($this)==$model) return null;	// avoiding cycle calling
-			$app = $this->load_model($model, $stream);
-			if (!$app_stream=$app->mapping($stream['url'], $method_check)) return null;	// not found match customer route
-			$stream = array_merge($stream, $app_stream);
-		} else {
-			$stream = array_merge($stream, $component);
-			$stream['param'] = $frags;
-		}
-		return $stream;
-	}
 	/*** mix component_locator(string $model[,string $method[,bool $ajax=false]])
 	 *	@description	check component if exists and fulfill stream by given model, method and ajax option.
 	 *	@input	$model	model name
