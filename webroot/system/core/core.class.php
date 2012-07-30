@@ -157,9 +157,9 @@ Class Core
             if ($r[0]==='www') array_shift($r);
             return join('.', $r);
 		} elseif ($name==='_URL') {
-                return (@$_SERVER['HTTPS']?'https':'http').'://'.$_SERVER['HTTP_HOST'].(isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/');
+            return (@$_SERVER['HTTPS']?'https':'http').'://'.$_SERVER['HTTP_HOST'].(isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/');
         } elseif ($name==='_PATH') {
-                return isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/';
+            return isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/';
 		}
 		
 		if ($method=='get') return trim(@$_GET[$name]);
@@ -767,9 +767,7 @@ class Web extends Core
 		if (substr($view, -8)!='.tpl.php') $view .= ".tpl.php";
         if (!file_exists($view)) return $bind;
         if (is_array($bind) && array_keys($bind)!==range(0, count($bind)-1)) {
-            foreach ($bind as $key=>$val) {
-                $$key = $val;
-            }
+			extract($bind);
         }
         ob_start();
         include $view;

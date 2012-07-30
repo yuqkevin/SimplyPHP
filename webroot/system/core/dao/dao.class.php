@@ -229,21 +229,28 @@ class Dao
 	public function table_single_tree($table_def, $root, $fields='*', $filter=null)
 	{
         $prefix = strtolower(@$table_def['prefix']);
-		$filter += array($table_def['root']=>$root);
+		$filter[$table_def['root']] = $root;
 		$suffix = array('orderby'=>array($table_def['parent']=>null,$table_def['weight']=>'desc'));
 		$lines = $this->table_search($table_def, $filter, $suffix, $fields);
 		if (!$lines) return null;
-		$nodes = array_shift($lines);
+		$nodes = array(array_shift($lines));
 		$next = null;
-		while (count($lines)) {
-			$line = array_shift($lines);
-			for ($i=0; $i<count($nodes); $i++) {
+		$cnt_k = count($lines);
+		for ($k=0; $k<$cnt_k; $k++) {
+			$line = $lines[$k];
+			$cnt = count($nodes);
+			for ($i=0; $i<$cnt; $i++) {
 				if ($nodes[$i]['id']==$line['parent']) {
-					$next = $nodes[$i]['id'];
-					$nodes[$i]['id'] = $line;
+					if ($next=@$nodes[$i+1]) {
+						while ($next['parent']==$line['parent']) {
+							$i++;
+							$next = @$nodes[$i+1];
+						}
+					}
+					$nodes[$i+1] = $line;
 				} elseif ($next) {
-					$tmp = $nodes[$i]['id'];
-					$nodes[$i]['id'] = $next;
+					$tmp = $nodes[$i];
+					$nodes[$i] = $next;
 					$next = $tmp;
 				}
 			}
@@ -262,8 +269,6 @@ class Dao
 	**/
     public function table_tree($table_def, $root, $deep=null, $fields='*', $filter=null, $level=1)
     {
-		// check tree retrieve type if it's a single tree retriving
-		if (isset($table_def['root'])&&!isset($deep)) return $this->table_single_tree($table_def, $root, $fields, $filter);
 		if (!$this->dbh) $this->connect();
         $table_name = $table_def['name'];
 		if (isset($table_def['schema'])) $table_name = $table_def['schema'].".$table_name";
@@ -419,10 +424,10 @@ class Dao
 			$suffix_str .= " order by ";
 			if (is_array($orderby)) {
 				$orders = array();
-				foreach ($orderby as $key=>$dir) $orders[] = strpos($key, $prefix)===0?"$key $dir":"$prefix$key $dir";
+				foreach ($orderby as $key=>$dir) $orders[] = $this->prefix($key, $prefix, 'on')." $dir";
 				$orderby = join(",", $orders);
-			} elseif (strpos($orderby, $prefix)!==0) {
-				$orderby = $prefix.$orderby;
+			} else {
+				$orderby = $this->prefix($orderby, $prefix, 'on');
 			}
 			$suffix_str .= $orderby;
 		}
@@ -623,6 +628,7 @@ Class TableObject
 	public function tree($root, $deep=null, $fields='*', $filter=null)
 	{
 		if (!(isset($this->table['parent'])&&isset($this->table['weight']))) return null;
+		if (isset($this->table['root'])&&!$deep) return $this->db->table_single_tree($this->table, $root, $fields, $filter);
 		return $this->db->table_tree($this->table, $root, $deep, $fields, $filter);
 	}
 	public function create($param)
