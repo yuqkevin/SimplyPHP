@@ -25,6 +25,8 @@ class Model extends Web
 	const HOOK_MODEL = 'model';
 	const HOOK_LANGUAGE = 'client_language';	// hook in $GLOBALS for language dictionary
 
+	const ENV_URL_PARAM_FRAG = 'UrlParamFrag';	// entrance in env for parameters via url frags
+
 	public function __construct($conf)
 	{
 		// merge dependencies defined in parent classes
@@ -39,6 +41,22 @@ class Model extends Web
 		// loading libraries
 		$this->load_dependencies();
 		$this->initial();
+	}
+
+	/*** void boot(array $stream)
+	 *	@description	boottrap for model which is mapped from url and usually called by controller
+	 *	@input	$stream	parameters from url analysis
+	 *	@outpt	flush out model output
+	***/
+	public function boot($stream)
+	{
+        if ($stream_verify=$this->component_locator($stream['model'], $stream['method'])) {
+            $stream = array_merge($stream, $stream_verify);
+            $this->component($stream);
+        } else {
+            $this->route($stream['offset']?substr($stream['url'],strlen($stream['offset'])):$stream['url']);
+        }
+
 	}
 	// This method should be overrided with application's own route logic if it applied
 	public function route($url)
@@ -170,6 +188,65 @@ class Model extends Web
 			}
 		}
 		return count($keys)==1?$vals[$keys[0]]:$vals;
+	}
+	/*** loading model and put it on hook
+	 *	@brach	Model
+	**/
+	protected function load_model($model_name, $stream=null)
+	{
+        $models = $this->globals(self::HOOK_MODEL);
+        $model = null;
+        if (isset($models[$model_name])) {
+            $model = $models[$model_name];
+        } else {
+            $model = new $model_name($this->conf, $stream);
+            $models[$model_name] = $model;
+            $this->globals(self::HOOK_MODEL, $models);
+        }
+		if ($stream) $model->stream = $stream;
+		return $model;
+	}
+	/*** mapping component to url 
+	 *	@brach	Model
+	**/
+	public function component_url($model_name, $method, $ajax=true)
+	{
+		$class_name = $this->model_name($model_name, true); // force to class name format
+		$path_name = $this->model_name($model_name, false);
+		$url = isset($this->conf['route'][$class_name])?$this->conf['route'][$class_name]:('/'.$path_name);
+		if ($ajax) $url .= ($url=='/'?null:'/').$this->conf['global']['ajax_frag'];
+		return $url.($url=='/'?null:'/').$method;
+	}
+
+	/*** array conf_model()
+	 *	@description get listing of accessable models based on configure file
+	 *	@input none
+	 *	@return	list of model name=>file
+	 *	@brach	Model
+	***/
+	public function conf_model()
+	{
+		$defs = array_merge($this->conf['access']['model'], array_keys((array)$this->conf['route']));
+		$models = array();
+		foreach ($defs as $def) {
+			if (substr($def, -1)=='*') {
+				$def = substr($def, 0, -1);
+				$dir = dirname($this->bean_file($def));
+				$limit = '\/model\.class\.php$';
+				$files = $this->recursive_scandir($dir, $limit);
+				foreach ($files as $file) {
+					if ($offset=substr(dirname($file), strlen($dir)+1)) {
+						$class_name = $def.str_replace(' ','', ucwords(join(' ',preg_split("/\//", $offset))));
+					} else {
+						$class_name = $def;
+					}
+					$models[$class_name] = $file;
+				}
+			} else {
+				$models[$def] = $this->bean_file($def);
+			}
+		}
+		return $models;
 	}
 
 	/*** string key_gen([int $length=8[,string $salt=null]])

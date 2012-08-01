@@ -75,6 +75,7 @@ class Dao
 		if (!$this->dbh) $this->connect();
         $table_name = $table_def['name'];
 		$prefix = strtolower(@$table_def['prefix']);
+		$fields = $this->field_convert($fields, $prefix);
 		if (isset($table_def['schema'])) $table_name = $table_def['schema'].".$table_name";
 		$sth = $this->dbh->prepare("select $fields from $table_name where {$table_def['pkey']}=?");
         $sth->execute(array($id));
@@ -181,6 +182,7 @@ class Dao
         $table_name = $table_def['name'];
 		if (isset($table_def['schema'])) $table_name = $table_def['schema'].".$table_name";
 		$prefix = strtolower(@$table_def['prefix']);
+		$fields = $this->field_convert($fields, $prefix);
 		$binding = array();
         $query = "select $fields from $table_name";
         if ($filter) {
@@ -229,6 +231,7 @@ class Dao
 	public function table_single_tree($table_def, $root, $fields='*', $filter=null)
 	{
         $prefix = strtolower(@$table_def['prefix']);
+		$fields = $this->field_convert($fields, $prefix);
 		$filter[$table_def['root']] = $root;
 		$suffix = array('orderby'=>array($table_def['parent']=>null,$table_def['weight']=>'desc'));
 		$lines = $this->table_search($table_def, $filter, $suffix, $fields);
@@ -273,6 +276,7 @@ class Dao
         $table_name = $table_def['name'];
 		if (isset($table_def['schema'])) $table_name = $table_def['schema'].".$table_name";
 		$prefix = strtolower(@$table_def['prefix']);
+		$fields = $this->field_convert($fields, $prefix);
         $field_id = $table_def['pkey'];
         $field_parent = $table_def['parent'];
         $field_weight = $table_def['weight'];
@@ -435,6 +439,24 @@ class Dao
 			$suffix_str .= " limit $limit";
 		}
 		return $suffix_str;
+	}
+
+	/*** string field_convert(mix $fields[, string $prefix=null])
+	 *	@description	convert fields into real table fields for data retrieving
+	 *	@input	$fields	string for real fields (e.g. * or field1,field2,...), array for prefix dropped field array
+	 *			$prefix	field prefix, null for non prefix
+	 *	@return	real table fields in SQL query. e.g * or field1,field2
+	***/
+	protected function field_convert($fields, $prefix=null)
+	{
+		if (!is_array($fields)) return $fields;
+		if ($prefix) {
+			// has prefix, convert one by one
+			for ($i=0; $i<count($fields); $i++) {
+				$fields[$i] = $this->prefix($fields[$i], $prefix, 'on');
+			}
+		}
+		return join(',', $fields);
 	}
 	/**
 	$param sample: 

@@ -13,6 +13,7 @@
 //
 define('PREFIX_MODEL', 'Mo');  // user model prefix
 define('PREFIX_LIB', 'Lib');   // user library prefix
+define('GLOBAL_ENV_HOOK','SimplyPhpEnv');	// hook for global variable shared by Cntroller,Model and Library
 
 function __autoload($class)
 {
@@ -47,21 +48,17 @@ Class Controller
     public function boot()
     {
         $this->conf = $this->configure();
+		$this->env_initial();
 		$stream = $this->mapping();
 		$model = new $stream['model']($this->conf);
-		if ($stream_verify=$model->component_locator($stream['model'], $stream['method'])) {
-			$stream = array_merge($stream, $stream_verify);
-			$model->component($stream);
-		} else {
-			$model->route($stream['offset']?substr($stream['url'],strlen($stream['offset'])):$stream['url']);
-		}
+		$model->boot($stream);
     }
 
 	/*** array configure()
 	 *	@description	parse configure ini files into array
 	 *	@return	configure parameters in associative array
 	***/
-	public function configure()
+	protected function configure()
 	{
 		$domain = preg_replace("/^www\./", "", strtolower($_SERVER['HTTP_HOST']));
 		$conf_dir = APP_DIR."/conf";
@@ -112,13 +109,24 @@ Class Controller
 		if (!defined('DEBUG')&&isset($conf['global']['DEBUG'])) define('DEBUG', $conf['global']['DEBUG']); // set global constant: DEGUB
 		return $conf;
 	}
+
+	/*** void env_initial()
+	 *	@description	initializing global environmnet variables
+	***/
+	protected function env_initial()
+	{
+		$this->env('DOMAIN', preg_replace("/^www\./", '', strtolower($_SERVER['HTTP_HOST'])));
+		$this->env('URL', (@$_SERVER['HTTPS']?'https':'http').'://'.strtolower($_SERVER['HTTP_HOST']).(isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/'));
+		$this->env('PATH', isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/');
+	}
+
 	/** mix mapping([string $url=null[, bool $method_check=false]])
 	 *	@description Parsing URL into hash stream
 	 *	@input	string $url	url, using current reqest url if omitted
 	 *			bool $method_check	force to check method file, give error if method file doesn't exist and method_check is set to true
 	 *	@output	array stream with defined parameters
 	**/
-	public function mapping()
+	protected function mapping()
 	{
 		$stream = array(
 			'offset'=>null,		// matched value of pre-configure model = offset pair, it must be /somthing or null
@@ -189,6 +197,19 @@ Class Controller
         if (substr($url, -1)=='/') $url = substr($url, 0, -1);
         return preg_split("|/|", $url);
     }
+
+	/*** mix env(string $name[, mix $val=null])
+	 *	@description	envirnment varibale getter/setter
+	 *	@input	$name	variable name as key in env associative array
+	 *			$val	value for variable setter
+	 *	@return	value of given variable name
+	***/
+	protected function env($name, $val=null)
+	{
+		$HOOK = GLOBAL_ENV_HOOK;
+		if (!isset($val)) return @$GLOBALS[$HOOK][$name];
+		return @$GLOBALS[$HOOK][$name] = $val;
+	}
 }
 
 $ctl = new Controller();

@@ -21,8 +21,7 @@ Class Core
 	const HOOK_LIB = 'library';
 	const HOOK_MODEL = 'model';
 	const HOOK_DB = 'database';
-	const HOOK_VAR = 'w3s_var';	// hook name for env vars in both session and global
-	const HOOK_GLOBAL = 'w3s_global';	// hook name in global store
+	const HOOK_VAR = 'SimplyPhpVar';	// hook name for regular variables in both session and global
 	const HOOK_BENCHMARK = 'w3s_benchmark';	// global, array(key1=>array('start'=>time,'end'=>time),key2=>....)
 	const W3S_SEQ = 'w3s_sequence';
 	const REQUEST_SESSION = 'w3s_request';	// for input cache
@@ -42,43 +41,34 @@ Class Core
 	 ***/
 	public function env($name, $val=null, $session=false)
 	{
-		$env_name = "env:$name"; // using 'env:' to aviod name conflict with regular variable in hook
-		if ($session) return $this->session($env_name, $val);	// for explicit session varaibles
-		// otherwise, check hook in order:  W3S Reserve(readonly) -> $_SERVER(readonly) -> $GLOBALS -> session
-		if ($name==='DOMAIN') {
-			$r = preg_split("/\./", strtolower($_SERVER['HTTP_HOST']));
-			if ($r[0]==='www') array_shift($r);
-			return join('.', $r);
-		} elseif ($name==='URL') {
-			return $this->request('_URL');
-		} elseif ($name==='PATH') {
-			return $this->request('_PATH');
-		} elseif (isset($_SERVER[$name])) {
-			return $_SERVER[$name];
+		$HOOK = GLOBAL_ENV_HOOK;	// global environment variable hook
+		if ($session) return $this->session($name, $val, $HOOK);	// for explicit session varaibles
+		// otherwise, check hook in order:  $_SERVER(readonly) -> $GLOBALS -> session
+		if (isset($_SERVER[$name])) {
+            return $_SERVER[$name];
+        } elseif ($name==='DOMAIN'||$name==='URL'||$name==='PATH') {
+			return $GLOBALS[$HOOK][$name];
 		}
-		// check global and session
-        $HOOK = self::HOOK_VAR;
-		if (!isset($GLOBALS[$HOOK][$env_name])&&$this->session($env_name)) return $this->session($env_name, $val);		// find pre-defined in session only
-		// use global hook as default
-		return self::_hook_var(&$GLOBALS, $env_name, $val, $HOOK);
+		// application defined env varriables
+		return $this->_hook_var(&$GLOBALS, $name, $val, $HOOK);
 	}
 	// session getter/setter
-    public function session($name, $val=null)
+    public function session($name, $val=null, $HOOK=null)
     {
         if (!session_id()) session_start();
 		if ($name==='id') return session_id();
-        $HOOK = self::HOOK_VAR;
+        if (!isset($HOOK)) $HOOK = self::HOOK_VAR;
         if ($name=='clear') {
             unset($_SESSION[$HOOK]);
             return true;
         }
-		return self::_hook_var(&$_SESSION, $name, $val, $HOOK);
+		return $this->_hook_var(&$_SESSION, $name, $val, $HOOK);
     }
 	/** Global Data Storage **/
 	protected function globals($name, $val=null)
 	{
-		$HOOK = self::HOOK_GLOBAL;
-		return self::_hook_var(&$GLOBALS, $name, $val, $HOOK);
+		$HOOK = self::HOOK_VAR;
+		return $this->_hook_var(&$GLOBALS, $name, $val, $HOOK);
 	}
 	private function _hook_var(&$scope, $name, $val, $HOOK)
 	{
@@ -111,9 +101,9 @@ Class Core
     public function sequence($offset=0, $schema=null)
     {
 		if (!$schema) $schema = self::W3S_SEQ;
-        if ($offset=='reset') return self::session($schema, 0);
-        $seq = intval(self::session($schema)) + $offset;
-        if ($offset) self::session($schema, $seq);
+        if ($offset=='reset') return $this->session($schema, 0);
+        $seq = intval($this->session($schema)) + $offset;
+        if ($offset) $this->session($schema, $seq);
         return $seq;
     }
 
@@ -143,15 +133,15 @@ Class Core
 	{
 		$method = strtolower($method);
 		#if ($method&&!$name) {
-		#	return $method=='get'?$_GET:self::_postvars($_POST);
+		#	return $method=='get'?$_GET:$this->_postvars($_POST);
 		#}
 		if ($name==='_POST') {
-			return self::_postvars($_POST);
+			return $this->_postvars($_POST);
 		} elseif ($name==='_GET') {
 			if (isset($_GET['_ENTRY'])) unset($_GET['_ENTRY']);
 			return $_GET;
 		} elseif ($name==='_SESSION') {
-			return self::session(self::REQUEST_SESSION);
+			return $this->session(self::REQUEST_SESSION);
 		} elseif ($name==='_DOMAIN') {
             $r = preg_split("/\./", strtolower($_SERVER['HTTP_HOST']));
             if ($r[0]==='www') array_shift($r);
@@ -163,14 +153,13 @@ Class Core
 		}
 		
 		if ($method=='get') return trim(@$_GET[$name]);
-		if ($method=='post') return self::_postvars($_POST, $name);
-		$val = isset($_POST[$name])?self::_postvars($_POST, $name):(isset($_GET[$name])?trim($_GET[$name]):null);
+		if ($method=='post') return $this->_postvars($_POST, $name);
+		$val = isset($_POST[$name])?$this->_postvars($_POST, $name):(isset($_GET[$name])?trim($_GET[$name]):null);
 		if ($method=='session'||$method=='set') {
-			$request = (array) self::session(self::REQUEST_SESSION);
+			$request = (array) $this->session(self::REQUEST_SESSION);
 			if ($method=='set') {
 				// set session value
-				$request[$name] = $init_val;
-				$val = $init_val;
+				$request[$name] = $val = $init_val;
 			} elseif ($val) {
 				$request[$name] = $val;
 			} elseif (!isset($request[$name])||!$request[$name]) {
@@ -179,13 +168,25 @@ Class Core
 			} else {
 				$val = @$request[$name];
 			}
-			self::session(self::REQUEST_SESSION, $request);
+			$this->session(self::REQUEST_SESSION, $request);
 		} elseif (!isset($val)&&isset($init_val)) {
 			// initial for regular request (post/get)
 			$val = $init_val;
 		}
 		return $val;
 	}
+
+	/*** mix last_input(string $name)
+	 *	@description	get last client input parameter which stored in the session. it's shortcut of request($name, 'session')
+	 *	@input	$name	parameter name which is originally the key in $_POST or $_GET array
+	 *	@return	the value of the parameter if any, or false if not stored before.
+	***/
+	protected function last_input($name)
+	{
+		$last_request = (array) $this->session(self::REQUEST_SESSION);
+		return @$last_request[$name];
+	}
+
 	/*** mix cache(string $name[, mix $val[, int $expire]])
 	 *	@description	getter/setter data cacher as configured
 	 *	@input	$name	variable name (key)
@@ -345,60 +346,6 @@ Class Core
 			$this->error("Error! The library hook $name has been occupied already.");
 		}
 		return $lib;
-	}
-	/*** loading model and put it on hook **/
-	protected function load_model($model_name, $stream=null)
-	{
-        $models = $this->globals(self::HOOK_MODEL);
-        $model = null;
-        if (isset($models[$model_name])) {
-            $model = $models[$model_name];
-        } else {
-            $model = new $model_name($this->conf, $stream);
-            $models[$model_name] = $model;
-            $this->globals(self::HOOK_MODEL, $models);
-        }
-		if ($stream) $model->stream = $stream;
-		return $model;
-	}
-	/*** mapping component to url  **/
-	public function component_url($model_name, $method, $ajax=true)
-	{
-		$class_name = $this->model_name($model_name, true); // force to class name format
-		$path_name = $this->model_name($model_name, false);
-		$url = isset($this->conf['route'][$class_name])?$this->conf['route'][$class_name]:('/'.$path_name);
-		if ($ajax) $url .= ($url=='/'?null:'/').$this->conf['global']['ajax_frag'];
-		return $url.($url=='/'?null:'/').$method;
-	}
-
-	/*** array conf_model()
-	 *	@description get listing of accessable models based on configure file
-	 *	@input none
-	 *	@return	list of model name=>file
-	***/
-	public function conf_model()
-	{
-		$defs = array_merge($this->conf['access']['model'], array_keys((array)$this->conf['route']));
-		$models = array();
-		foreach ($defs as $def) {
-			if (substr($def, -1)=='*') {
-				$def = substr($def, 0, -1);
-				$dir = dirname($this->bean_file($def));
-				$limit = '\/model\.class\.php$';
-				$files = $this->recursive_scandir($dir, $limit);
-				foreach ($files as $file) {
-					if ($offset=substr(dirname($file), strlen($dir)+1)) {
-						$class_name = $def.str_replace(' ','', ucwords(join(' ',preg_split("/\//", $offset))));
-					} else {
-						$class_name = $def;
-					}
-					$models[$class_name] = $file;
-				}
-			} else {
-				$models[$def] = $this->bean_file($def);
-			}
-		}
-		return $models;
 	}
 
 	/*** array recursive_scandir(string $root[, string $file_name=null])
