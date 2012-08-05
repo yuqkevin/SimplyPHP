@@ -27,6 +27,8 @@
 // +---------+-------------------------------------------------------------------------------------------------------+
 // | weight	 | Weight number for rank in tree structre table	Bigger in weight then higher in rank.
 // +---------+-------------------------------------------------------------------------------------------------------+
+// | order	 | (optional) Direction for weight, 'asc/desc', default is desc, 
+// +---------+-------------------------------------------------------------------------------------------------------+
 
 // Data Source Name (DSN) Array Definition
 // +----------+---------------------------------------------------------------------+
@@ -233,7 +235,7 @@ class Dao
         $prefix = strtolower(@$table_def['prefix']);
 		$fields = $this->field_convert($fields, $prefix);
 		$filter[$table_def['root']] = $root;
-		$suffix = array('orderby'=>array($table_def['parent']=>null,$table_def['weight']=>'desc'));
+		$suffix = array('orderby'=>array($table_def['parent']=>null,$table_def['weight']=>isset($table_def['order'])?$table_def['order']:'desc'));
 		$lines = $this->table_search($table_def, $filter, $suffix, $fields);
 		if (!$lines) return null;
 		$nodes = array(array_shift($lines));
@@ -279,7 +281,7 @@ class Dao
 		$fields = $this->field_convert($fields, $prefix);
         $field_id = $table_def['pkey'];
         $field_parent = $table_def['parent'];
-        $field_weight = $table_def['weight'];
+        $orderby = $table_def['weight'].' '.(isset($table_def['order'])?$table_def['order']:'desc');
 		$pfilter = $this->prefix($filter, $prefix, 'on');
 		if (is_array($pfilter)) {
 			$pfilter[$field_parent] = $root;
@@ -287,7 +289,7 @@ class Dao
 			$pfilter = array($field_parent=>$root);
 		}
 		list($filter_str, $binding) = $this->param_scan($pfilter, 'filter');
-		$sth = $this->dbh->prepare("select $fields,$level as LEVEL from $table_name where $filter_str order by $field_weight desc");
+		$sth = $this->dbh->prepare("select $fields,$level as LEVEL from $table_name where $filter_str order by $orderby");
 		if (!$sth) {
 			return $this->error_handle($this->dbh->errorInfo());
 		}
