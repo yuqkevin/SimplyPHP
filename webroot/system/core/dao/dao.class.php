@@ -29,6 +29,8 @@
 // +---------+-------------------------------------------------------------------------------------------------------+
 // | order	 | (optional) Direction for weight, 'asc/desc', default is desc, 
 // +---------+-------------------------------------------------------------------------------------------------------+
+// | access  | (optional) table access feature: 'readonly.read/write', default is 'read/write'
+// +---------+-------------------------------------------------------------------------------------------------------+
 
 // Data Source Name (DSN) Array Definition
 // +----------+---------------------------------------------------------------------+
@@ -51,6 +53,9 @@ class Dao
 	public $transaction = 0; // 0:non-transaction, 1:in transaction, 2 or others: error happened in transaction
 	public $error = null;	// error info for debugging
 	protected $dsn = null;
+
+	const	ACCESS_READONLY = 'readonly';	// read only table. table access feature in table_def
+
 	public function __construct($dsn)
 	{
 		$this->dsn = $dsn;
@@ -74,6 +79,7 @@ class Dao
 	}
 	public function table_read($table_def, $id, $fields='*')
 	{
+		if (isset($table_def['access'])&&strtolower($table_def['access'])===self::ACCESS_READONLY) return $this->error_handler('ERROR_READONLY_TABLE');
 		if (!$this->dbh) $this->connect();
         $table_name = $table_def['name'];
 		$prefix = strtolower(@$table_def['prefix']);
@@ -87,6 +93,7 @@ class Dao
 	}
 	public function table_update($table_def, $id, $param)
 	{
+		if (isset($table_def['access'])&&strtolower($table_def['access'])===self::ACCESS_READONLY) return $this->error_handler('ERROR_READONLY_TABLE');
 		$this->error = null;
 		if (!$this->dbh) $this->connect();
         $table_name = $table_def['name'];
@@ -115,6 +122,7 @@ class Dao
 	}
 	public function table_delete($table_def, $id)
 	{
+		if (isset($table_def['access'])&&strtolower($table_def['access'])===self::ACCESS_READONLY) return $this->error_handler('ERROR_READONLY_TABLE');
 		$this->error = null;
 		if (!$this->dbh) $this->connect();
         $table_name = $table_def['name'];
@@ -141,6 +149,7 @@ class Dao
 	}
 	public function table_insert($table_def, $param)
 	{
+		if (isset($table_def['access'])&&strtolower($table_def['access'])===self::ACCESS_READONLY) return $this->error_handler('ERROR_READONLY_TABLE');
 		if (!$this->dbh) $this->connect();
         $table_name = $table_def['name'];
 		$prefix = strtolower(@$table_def['prefix']);
@@ -394,7 +403,7 @@ class Dao
 			error_log($err_msg, 3, $errlog);
 		}
 		if ($this->error&&!$this->transaction) {
-			exit("Sorry, we can not process your request at this moment. Please try again later.");
+			exit("Sorry, an unexpected error happened and failed to process database update. \nPlease contact your system administrator or try again later.");
 		} elseif ($this->error) {
 			$this->transaction *= 2; // set error if in transaction
 			return false;
