@@ -218,6 +218,16 @@ class Model extends Web
 		return $url.($url=='/'?null:'/').$method;
 	}
 
+	/*** string component_id([int $seq=null])
+	 *	@description generate component DOM id based on stream for given sequence
+	 *	@input	$seq	sequence to aviod duplicated id
+	 *	@return	html DOM id
+	***/
+	public function component_id($seq=null)
+	{
+		$component_id = $this->stream['model'].'-'.$this->stream['method'];
+		return $seq?"$component_id-$seq":$component_id;
+	}
 	/*** array conf_model()
 	 *	@description get listing of accessable models based on configure file
 	 *	@input none
