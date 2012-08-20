@@ -156,7 +156,7 @@ class Dao
 		$pkey = $table_def['pkey'];
 		$param = $this->prefix($param, $prefix, 'on');
         if (!isset($param[$pkey])||!$param[$pkey]) {
-			if ($seq=@$table_def['seq']) {
+			if (isset($table_def['seq'])&&($seq=$table_def['seq'])) {
 				if (isset($table_def['schema'])) $seq = $table_def['schema'].".$seq";
                 if ($seq==='fkey') {
                     return null;
@@ -398,7 +398,7 @@ class Dao
 		if ($err) {
 			$this->error = $err;
 			$err_msg = sprintf("%s\t%s\t%s\n%s\n", date('Y-m-d H:i:s'), 
-				isset($_SERVER['REMOTE_ADDR'])?$_SERVER['REMOTE_ADDR']:'Unknown', is_array($err)?serialize($err):$err, print_r(debug_backtrace(), true));
+				isset($_SERVER['REMOTE_ADDR'])?$_SERVER['REMOTE_ADDR']:'Unknown', is_array($err)?serialize($err):$err, print_r(error_get_last(), true));
 			error_log($err_msg, 3, $errlog);
 		}
 		if ($this->error&&!$this->transaction) {

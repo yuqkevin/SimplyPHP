@@ -478,7 +478,13 @@ Class Core
         $err_msg = sprintf("%s\t%s\t%s\n%s\n", 
 			$timestamp, $_SERVER['REMOTE_ADDR'], is_array($err)?serialize($err):$err, $traceback?print_r(debug_backtrace(), true):null);
         error_log($err_msg, 3, $log_file);
-		exit("Internal Error at $timestamp.");
+		if ($this->conf['global']['DEBUG']) {
+			$trace=debug_backtrace();
+			$caller = "[ ".$trace[0]['file'].' at line '.$trace[0]['line']." ]";
+		} else {
+			$caller = null;
+		}
+		exit("Internal Error at $timestamp. $caller");
 	}
 	/** unserialize given string if it is unserialized**/
 	public function unserialize($str)

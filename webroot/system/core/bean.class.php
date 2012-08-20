@@ -218,15 +218,25 @@ class Model extends Web
 		return $url.($url=='/'?null:'/').$method;
 	}
 
-	/*** string component_id([int $seq=null])
+	/*** string component_id([int $seq=null[,string $method=null[, string $model=null])
 	 *	@description generate component DOM id based on stream for given sequence
 	 *	@input	$seq	sequence to aviod duplicated id
 	 *	@return	html DOM id
 	***/
-	public function component_id($seq=null)
+	public function component_id($seq=null, $method=null, $model=null)
 	{
-		$component_id = $this->stream['model'].'-'.$this->stream['method'];
-		return $seq?"$component_id-$seq":$component_id;
+		if (!$method) $method = $this->stream['method'];
+		if (!$model) $model = $this->stream['model'];
+		if (!isset($seq)) $seq = $this->sequence(0);
+		return $model.'-'.$method.($seq?('-'.$seq):null);
+	}
+	/*** void access_denied([$message=null])
+	 *	@description  message printer for deny of component/action access, mostly this is called in handler
+	 *	@input	$message	the message print on client side, debug info will be given if message is omitted.
+	***/
+	protected function access_denied($message=null)
+	{
+		$this->output($message?$message:"Error!!! Access Denied. [{$this->stream['model']}::{$this->stream['method']}]");
 	}
 	/*** array conf_model()
 	 *	@description get listing of accessable models based on configure file
@@ -284,12 +294,17 @@ class Model extends Web
 		return $this->xor_crypt($key, pack('H*',$enc_str));
 	}
 	/** Set Stream to json format for ajax request **/
-	protected function ajax()
+	protected function ajax($name=null, $val=null)
 	{
 		$this->stream['ajax'] = true;
 	    $this->stream['view_file'] = null;
     	$this->stream['format'] = 'json';
-	    $this->stream['data'] = array('success'=>false,'message'=>null);
+		if (!isset($this->stream['data'])) {
+			// initial
+	    	$this->stream['data'] = array('success'=>false,'message'=>null);
+		} else {
+			$this->stream['data'][$name] = $val;
+		}
 	}
 	/*** array component_list($class_name)
 	 *	@description	get list of component for given model
