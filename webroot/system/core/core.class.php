@@ -25,6 +25,7 @@ Class Core
 	const HOOK_BENCHMARK = 'w3s_benchmark';	// global, array(key1=>array('start'=>time,'end'=>time),key2=>....)
 	const W3S_SEQ = 'w3s_sequence';
 	const REQUEST_SESSION = 'w3s_request';	// for input cache
+	const SESSION_TOGGLE = 'w3s_toggle';	// for variable which is read one time only and will be wipe out automatically after read.
 	// user session hook
     const USER_SESSION_AUTH = 'W3S::USER_SA'; // user authenticate session
     const USER_SESSION_HOOK = 'W3S::USER_SH'; // store session which has same lifetime as user authenticated session
@@ -187,6 +188,25 @@ Class Core
 		return @$last_request[$name];
 	}
 
+	/*** mix session_toggle(string $name[, mix $val=null])
+	 *	@description getter/setter session variable and wipe the variable after first read.
+	 *	@input	$name	variable name
+	 *			$val	value of variable
+	 *	@return	the value of variable, null if variable does not exist.
+	***/
+	protected function session_toggle($name, $val=null)
+	{
+		$HOOK = self::SESSION_TOGGLE;
+		$toggle = (array) $this->session($HOOK);
+		if (isset($val)) {
+			$toggle[$name] = $val;
+		} else {
+			$val = isset($toggle[$name])?$toggle[$name]:null;
+			unset($toggle[$name]);
+		}
+		$this->session($HOOK, $toggle);
+		return $val;
+	}
 	/*** mix cache(string $name[, mix $val[, int $expire]])
 	 *	@description	getter/setter data cacher as configured
 	 *	@input	$name	variable name (key)
