@@ -17,7 +17,7 @@
 // e.g class Class1Class2Class3 extends Model {}
 // the class file should be app/model/class1/class2/class3.class.php
 
-class Model extends Web
+class Model extends Core
 {
 	public $stream = array();
 
@@ -62,6 +62,304 @@ class Model extends Web
 	public function route($url)
 	{
 		$this->page_not_found($url);
+	}
+	/*** mix component_locator(string $model[,string $method[,bool $ajax=false]])
+	 *	@description	check component if exists and fulfill stream by given model, method and ajax option.
+	 *	@input	$model	model name
+	 *			$method	method name (optional)
+	 *			$ajax	ajax option
+	 *	@return	string model file name if just model name given
+	 *			array('model'=>model,'method'=>method,'ajax'=>ajax,'model_file'=>model_file, 'method_file'=>method_file, 'view_file'=>view_file)
+	 *			false if no valid file found
+	***/
+	public function component_locator($model, $method=null, $ajax=true)
+	{
+		$model_name = $this->model_name($model);
+		$model_file = $this->bean_file($model_name);
+		if (!file_exists($model_file)) {
+			$this->status['error_code'] = 'FILE_DOES_NOT_EXIST';
+			$this->status['error'] = "The model file does not exist: $model_file.";
+			return false;
+		}
+		if (!isset($method)) return $model_file;
+		$suffix_inc = '.inc.php';
+		$suffix_tpl = '.tpl.php';
+		$file = dirname($model_file).'/handler/'.$method;
+		// method file
+		$method_file = $file.$suffix_inc;
+		if (!file_exists($method_file)) $method_file = null;
+		// view file
+		if (!$ajax) $file = dirname($model_file).'/view/'. $method;
+		$view_file = $file.$suffix_tpl;
+		if (!file_exists($view_file)) $view_file = null;
+		if (!($method_file||$view_file)) return null;	// invalid component
+		return array(
+			'model'=>$model,
+			'method'=>$method,
+			'ajax'=>$ajax,
+			'comp_url'=>$this->component_url($model, $method, true),
+			'model_file'=>$model_file, 
+			'method_file'=>$method_file, 
+			'view_file'=>$view_file
+		);
+	}
+
+	/*** bool model_verify(string $model_name)
+	 *	@description verify a model with config in sections access,route and domain, only registered model can be verified
+	 *	@input $model_name	model name in camelcase
+	 *	@return	true if verified, or false for failure of verification
+	***/
+	public function model_verify($model_name)
+	{
+		// format model_name
+		$model_name = $this->model_name($model_name);
+		// check access section in config
+		if (in_array($model_name, $this->conf['access']['model'])) return true;
+		// check wildcard match in access section
+		$path = preg_split("/\//", preg_replace("/([a-z0-9])([A-Z])/", "\\1/\\2", $model_name));
+		$class_str = null;
+		foreach ($path as $frag) {
+			$class_str .= $frag;
+			if (in_array("$class_str*", $this->conf['access']['model'])) return true;
+		}
+		// then check route table in config
+		if (isset($this->conf['route'][$model_name])) return true;
+		// then check domain dedicated models in config
+		if (isset($this->conf['domain'][$model_name])) {
+			$domains = preg_split("/[,\s]+/", strtolower($this->conf['domain'][$model_name]));
+			if (in_array($this->env('DOMAIN'), $domains)) return true;
+		}
+		return false;
+	}
+    public function load_view($view, $bind=null, $ext=null)
+    {
+		if (substr($view, -8)!='.tpl.php') $view .= ".tpl.php";
+        if (!file_exists($view)) return $bind;
+        if (is_array($bind) && array_keys($bind)!==range(0, count($bind)-1)) {
+			extract($bind);
+        }
+        ob_start();
+        include $view;
+        $content = ob_get_contents();
+        ob_end_clean();
+        return $content;
+    }
+	public function redirect($url, $code=307)
+	{
+		if (is_array($url)) {
+			if (isset($url['url'])) {
+				$message = @$url['message'];
+				$target_url = $url['url'];
+				if (@$url['method']=='alert') {
+					$alert = $message?"alert('$message');":null;
+					echo <<<EOT
+<script type="text/javascript">
+$alert
+window.location.href='{$url['url']}';
+</script>
+EOT;
+				} else {
+					$delay = isset($url['delay'])?$url['delay']:($message?3:0);
+					echo <<<EOT
+<html>
+<meta http-equiv="refresh" content="$delay; url=$target_url" />
+<body>$message</body>
+</html>
+EOT;
+				}
+				exit;
+			}
+			$url = '/';	// invalid parameter, redirect to home
+		}
+		if ($url==='/') {
+			if ($this->stream['offset']) $url = $this->stream['offset'];
+			header("location:$url", true, $code);
+		} elseif ($url[0]==='/') {
+			header("location:$url", TRUE, $code);
+		} else {
+			if ($this->stream['offset']) $url = "{$this->stream['offset']}/$url";
+			header("location:$url", true, $code);
+		}
+		exit;
+	}
+	public function page_not_found($message=null)
+	{
+		$url = $this->env('URL');
+		$not_found = $this->language_tag('NOT_FOUND');
+		$page_not_found = $this->language_tag('PAGE_NOT_FOUND');
+		echo <<<EOT
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html><head>
+<title>404 $not_found</title>
+</head><body>
+<h1>Not Found</h1>
+<p>$page_not_found</p>
+<hr>
+<address>$url</address>
+<p>$message</p>
+</body></html>
+EOT;
+		exit;
+	}
+
+    /** export
+     * output to client site with specific format
+    */
+    public function output($data, $format=null, $name=null)
+    {
+        $types = array(
+            'html'=>'text/html',
+			'plain'=>'text/plain',
+            'css'=>'text/css',
+            'js'=>'text/javascript',
+            'xml'=>'text/xml',
+            'excel'=>'application/vnd.ms-excel',
+            'word'=>'application/vnd.ms-word',
+            'pdf'=>'application/pdf',
+            'csv'=>'application/octet-stream',
+            'jpg'=>'image/jpeg',
+			'bin'=>'application/octet-stream'
+        );
+        $file_exts = array('excel'=>'xls','pdf'=>'pdf','csv'=>'csv');
+        header("Pragma: public");  //fix IE cache issue with PHP
+        header("Expires: 0");   // no cache
+        if ($format||$name) {
+            $content_type = isset($types[$format])?$types[$format]:($name?'application/octet-stream':'text/plain');
+            header("Content-Type: $content_type");
+            if (isset($file_exts[$format])||$name) {
+				// binary file
+				if (!$name) $name = 'download';
+				$file_name = isset($file_exts[$format])? "$name.{$file_exts[$format]}":$name;
+		        header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
+		        header("Cache-Control: private",false);
+                header("Content-Disposition: attachment; filename='$name'");
+		        header("Content-Transfer-Encoding: binary");
+        		header('Content-Length: '.strlen($data));
+            }
+            if ($format==='json') {
+                $info = json_encode($data);
+            } else {
+                $info = is_array($data)?serialize($data):$data;
+            }
+            echo $info;
+        } else {
+            echo $data;
+        }
+		if (ob_get_contents()) ob_flush();
+        exit;
+    }
+    /** simple get/post method
+     * @input string $url    remote url post to
+     *        array  $data   associative array of post data
+     * @return mix response
+    **/
+    protected function http_request($method, $url, $data=array())
+    {
+        $method=strtoupper($method);
+        $data = http_build_query($data);
+        if ($method=='GET') {
+            $url.='?'.$data;
+            return file_get_contents($url);
+        }
+        if ($method=='POST') {
+            $header = "Content-type: application/x-www-form-urlencoded\r\n"."Content-Length: ".strlen($data)."\r\n";
+            $m = 'rb';
+        } else {
+            $header = "Accept-language: en\r\n";
+            $m = 'r';
+        }
+        $context_options = array (
+            'http' => array (
+                'method' => $method,
+                'header'=> $header,
+                'content' => $data
+            )
+        );
+
+        $context = stream_context_create($context_options);
+        $fp = fopen($url, $m, false, $context);
+        if (!$fp) return false;
+        $response = @stream_get_contents($fp);
+        fclose($fp);
+        return $response;
+    }
+    /** Upload file with specific type
+     * @input
+     *  userfile    $__FILES entry
+     *  target      target file path, or folder if multiple upload
+     *  filter 		null:allow all types , or array('jpg','gif','...')
+     *  callback    call back function invoked for each valid upload file, used for post process such as resize
+     * @return
+     *  String/Array    target file name or callback return
+     *  false       invalid upload, maybe an attack
+     *  null        valid upload but failed for move or user callback
+	 * @security	do not allow upload file with '.' prefix, or force it to be visible by remove prefix '.'.
+    **/
+    public function upload_file($userfile, $target, $filter=array('jpg','gif','png','swf','bmp'), $callback=null)
+    {
+		if (!count(array_keys($_FILES))) return null;
+		if (!$target) return false;
+        if (is_array($_FILES[$userfile]["error"])) {
+            // batch upload
+			$name = null;
+			if (!is_dir($target)) {
+            	if (!mkdir($target, 0777, true)) return false;
+			}
+
+            $results = array();
+            foreach ($_FILES[$userfile]["error"] as $key => $error) {
+                $result = false;
+                if (!$_FILES[$userfile]["name"][$key]) continue;
+				$r = preg_split("/\./", $_FILES[$userfile]['name'][$key]);
+				$ext = array_pop($r);
+				$name = join('.', $r);	// batch upload do not allow specific target name, use upload file's name
+				if ($filter) {
+					if (!in_array(strtolower($ext), $filter)) continue;
+				}
+                if ($error==UPLOAD_ERR_OK) {
+                    $tmp_name = $_FILES[$userfile]["tmp_name"][$key];
+					if (!$name) {
+						$itarget .= $ext;
+					} else {
+						$name = preg_replace("/^\./","_", $name);
+                    	$itarget = "$target/$name.$ext";
+					}
+                    if ($callback && $res=call_user_func($callback, $tmp_name, $itarget)) {
+                        $name = basename($res);
+                        $result = true;
+                    } elseif (!$callback) {
+                        if (move_uploaded_file($tmp_name, $itarget)) {
+                            $result = true;
+                        }
+                    }
+                }
+                $results[$name] = $result;
+            }
+            return $results;
+        }
+        if (!is_uploaded_file($_FILES[$userfile]['tmp_name'])) {
+            // error
+            return false;
+        }
+        if (!$_FILES[$userfile]['name']) return false;  // invliad tag name
+		$r = preg_split("/\./", $_FILES[$userfile]['name']);
+		$ext = array_pop($r);
+		if ($filter&&$filter!=='*') {
+			if (!in_array(strtolower($ext), $filter)) return false;
+		}
+        $tmp_name = $_FILES[$userfile]['tmp_name'];
+
+        if ($callback) {
+            return call_user_func($callback, $tmp_name, $target);
+        } else {
+			$target = is_dir($target)?"$target/{$_FILES[$userfile]['name']}":$target;
+			if (!move_uploaded_file($tmp_name, $target)) return null;
+        }
+        return $target;
+    }
+	public function template_ext()
+	{
+		return defined('EXT')?EXT:null;
 	}
 	/*** string load_component(string $model, string $method[, array $conf=null[,bool $output=false]])
 	 *	@description	Loading given component by return content in string

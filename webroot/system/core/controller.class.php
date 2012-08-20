@@ -118,6 +118,7 @@ Class Controller
 		$this->env('DOMAIN', preg_replace("/^www\./", '', strtolower($_SERVER['HTTP_HOST'])));
 		$this->env('URL', (@$_SERVER['HTTPS']?'https':'http').'://'.strtolower($_SERVER['HTTP_HOST']).(isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/'));
 		$this->env('PATH', isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/');
+		$this->env('REQUEST', $_SERVER['REQUEST_URI']);
 	}
 
 	/** mix mapping([string $url=null[, bool $method_check=false]])
@@ -130,7 +131,8 @@ Class Controller
 	{
 		$stream = array(
 			'offset'=>null,		// matched value of pre-configure model = offset pair, it must be /somthing or null
-			'url'=>null,		// url without offset
+			'url'=>null,		// url without offset & query
+			'request'=>$_SERVER['REQUEST_URI'],	// original url from client
 			'model'=>null,		// model formal name: e.g. MoMyModel
 			'method'=>null,
 			'param'=>null,		// linear array, param from url. e.g. /user/login
