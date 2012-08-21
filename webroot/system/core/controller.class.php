@@ -117,7 +117,7 @@ Class Controller
 	{
 		$this->env('DOMAIN', preg_replace("/^www\./", '', strtolower($_SERVER['HTTP_HOST'])));
 		$this->env('URL', (@$_SERVER['HTTPS']?'https':'http').'://'.strtolower($_SERVER['HTTP_HOST']).(isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/'));
-		$this->env('PATH', isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/');
+		$this->env('URI', isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/');
 		$this->env('REQUEST', $_SERVER['REQUEST_URI']);
 	}
 

@@ -47,7 +47,7 @@ Class Core
 		// otherwise, check hook in order:  $_SERVER(readonly) -> $GLOBALS -> session
 		if (isset($_SERVER[$name])) {
             return $_SERVER[$name];
-        } elseif (in_array($name, array('DOMAIN','URL','PATH','REQUEST'))) {
+        } elseif (in_array($name, array('DOMAIN','URL','URI','REQUEST'))) {
 			return $GLOBALS[$HOOK][$name];
 		}
 		// application defined env varriables
@@ -124,7 +124,7 @@ Class Core
 	 *	@input	string $name	variable name (key), there are several reserved key name which in upper case and start with '_':
 	 *							_POST/_GET: return all POST/GET array
 	 *							_SESSION: return all request array which has session support fetaure
-	 *							_DOMAIN/_URL/_PATH: return http_host, http full request, request without http_host
+	 *							_DOMAIN/_URL/_URI: return http_host, http full request, request without http_host
 	 *			string $method	where the request coming from. 'post','get','session','set'.
 	 *							'session' and 'set' are for request which has session support
 	 *							if method is omitted, the check sequence is post->get->session in which the post has highest priority.
@@ -149,7 +149,7 @@ Class Core
             return join('.', $r);
 		} elseif ($name==='_URL') {
             return (@$_SERVER['HTTPS']?'https':'http').'://'.$_SERVER['HTTP_HOST'].(isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/');
-        } elseif ($name==='_PATH') {
+        } elseif ($name==='_URI') {
             return isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/';
 		} elseif ($name==='_REQUEST') {
 			return $_SERVER['REQUEST_URI'];
