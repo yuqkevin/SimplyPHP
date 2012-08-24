@@ -119,6 +119,7 @@ Class Controller
 		$this->env('URL', (@$_SERVER['HTTPS']?'https':'http').'://'.strtolower($_SERVER['HTTP_HOST']).(isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/'));
 		$this->env('URI', isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/');
 		$this->env('REQUEST', $_SERVER['REQUEST_URI']);
+		$this->env('SITE', (@$_SERVER['HTTPS']?'https':'http').'://'.$_SERVER['HTTP_HOST']);
 	}
 
 	/** mix mapping([string $url=null[, bool $method_check=false]])

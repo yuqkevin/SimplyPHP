@@ -600,8 +600,10 @@ EOT;
 		if (!isset($this->stream['data'])) {
 			// initial
 	    	$this->stream['data'] = array('success'=>false,'message'=>null);
-		} else {
-			$this->stream['data'][$name] = $val;
+		}
+		if (isset($name)&&isset($val)) return $this->stream['data'][$name] = $val;
+		if (!isset($val)&&is_array($name)) {
+			$this->stream['data'] = array_merge($this->stream['data'], $name);
 		}
 	}
 	/*** array component_list($class_name)

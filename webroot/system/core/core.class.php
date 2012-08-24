@@ -147,6 +147,8 @@ Class Core
             $r = preg_split("/\./", strtolower($_SERVER['HTTP_HOST']));
             if ($r[0]==='www') array_shift($r);
             return join('.', $r);
+		} elseif ($name==='_SITE') {
+			return (@$_SERVER['HTTPS']?'https':'http').'://'.$_SERVER['HTTP_HOST'];
 		} elseif ($name==='_URL') {
             return (@$_SERVER['HTTPS']?'https':'http').'://'.$_SERVER['HTTP_HOST'].(isset($_GET['_ENTRY'])?$_GET['_ENTRY']:'/');
         } elseif ($name==='_URI') {
@@ -335,7 +337,13 @@ Class Core
 	protected function load_dependencies()
 	{
 		foreach ((array)$this->dependencies as $class => $name) {
-			if ($name) $this->load_lib($class, $name);
+			if ($name) {
+				$this->load_lib($class, $name);
+			} else {
+		        $libraries = $this->globals(self::HOOK_LIB);
+        		if (!isset($libraries[$class])) $libraries[$class] = 0;	// placeholder
+				$this->globals(self::HOOK_LIB, $libraries);
+			}
 		}
 	}
 	/** load library
@@ -351,7 +359,7 @@ Class Core
 		if (!$name) $name = substr($class_name, strlen(PREFIX_LIB)); //remove prefix header
 		$libraries = $this->globals(self::HOOK_LIB);
 		$lib = null;
-		if (isset($libraries[$class_name])) {
+		if ($libraries[$class_name]) {
 			$lib = $libraries[$class_name];
 		} else {
 			$lib = new $class_name($this->conf);
@@ -604,8 +612,8 @@ Class Core
 	public function get_lib($lib_full_name, $load_on_fly=true)
 	{
         $libraries = $this->globals(self::HOOK_LIB);
-        if (isset($libraries[$lib_full_name])) return $libraries[$lib_full_name];
-		if (!$load_on_fly) $this->error("Library '$lib_full_name' has not been loaded yet.");;
+        if ($libraries[$lib_full_name]) return $libraries[$lib_full_name];
+		if (!$load_on_fly) isset($libraries[$lib_full_name])?$libraries[$lib_full_name]:$this->error("Library '$lib_full_name' is not found.");;
 		$lib_file = $this->bean_file($lib_full_name);
 		return file_exists($lib_file)?$this->load_lib($lib_full_name):$this->error("Library '$lib_full_name' Not Found.");
 	}
