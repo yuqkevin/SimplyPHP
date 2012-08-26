@@ -23,6 +23,7 @@ Class Core
 	const HOOK_DB = 'database';
 	const HOOK_VAR = 'SimplyPhpVar';	// hook name for regular variables in both session and global
 	const HOOK_BENCHMARK = 'w3s_benchmark';	// global, array(key1=>array('start'=>time,'end'=>time),key2=>....)
+	const HOOK_LANGUAGE = 'client_language';	// hook in $GLOBALS for language dictionary
 	const W3S_SEQ = 'w3s_sequence';
 	const REQUEST_SESSION = 'w3s_request';	// for input cache
 	const SESSION_TOGGLE = 'w3s_toggle';	// for variable which is read one time only and will be wipe out automatically after read.
@@ -117,6 +118,25 @@ Class Core
 	{
 		if (!$info=$this->session(self::USER_SESSION_AUTH)) return false;
 		return $name?@$info[$name]:$info;
+	}
+	/*** string language_tag(string $tag)
+	 *	@description find a translation for given tag in client language
+	 *	@input	$tag	tag name
+	 *	@return	translation of tag
+	***/
+	public function language_tag($tag)
+	{
+		if (!$language=$this->cookie('language')) $language='en';
+		if (!$dics=$this->globals(self::HOOK_LANGUAGE)) {
+			$dic_file = APP_DIR.'/conf/languages/'.$language.'.ini';
+			if (file_exists($dic_file)) {
+				$dics = parse_ini_file($dic_file);
+				$this->globals(self::HOOK_LANGUAGE, $dics);
+			} else {
+				$dics = array();
+			}
+		}
+		return @$dics[$tag];
 	}
 
 	/*** mix request(string $name[, string $method[,mix $init_val]])

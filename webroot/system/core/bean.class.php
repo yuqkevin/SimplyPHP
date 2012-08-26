@@ -23,7 +23,6 @@ class Model extends Core
 
 	protected $dependencies = array();	// libraries the model denpends on
 	const HOOK_MODEL = 'model';
-	const HOOK_LANGUAGE = 'client_language';	// hook in $GLOBALS for language dictionary
 
 	const ENV_URL_PARAM_FRAG = 'UrlParamFrag';	// entrance in env for parameters via url frags
 
@@ -388,25 +387,6 @@ EOT;
 		}
 		return $this->stream;
 	}
-	/*** string language_tag(string $tag)
-	 *	@description find a translation for given tag in client language
-	 *	@input	$tag	tag name
-	 *	@return	translation of tag
-	***/
-	protected function language_tag($tag)
-	{
-		if (!$language=$this->cookie('language')) $language='en';
-		if (!$dics=$this->globals(self::HOOK_LANGUAGE)) {
-			$dic_file = APP_DIR.'/conf/languages/'.$language.'.ini';
-			if (file_exists($dic_file)) {
-				$dics = parse_ini_file($dic_file);
-				$this->globals(self::HOOK_LANGUAGE, $dics);
-			} else {
-				$dics = array();
-			}
-		}
-		return @$dics[$tag];
-	}
 	/*** verify model access via domain setting in configure file ***/
 	private function domain_verify($model)
 	{
@@ -701,6 +681,8 @@ class Library extends Core
 	protected $conf = null;
 	protected $operator = null;	// current user
 	protected $dependencies = array();	// libraries the model denpends on
+	const	ERROR_KEY_CODE = 'code';	// 'error_code' in status
+	const	ERROR_KEY_MSG = 'message';	// 'error' in status
     public function __construct($conf=null)
 	{
 		// merge dependencies defined in parent classes
@@ -715,9 +697,17 @@ class Library extends Core
 		if ($dsn=$this->dsn_parse()) $this->load_db($dsn, $this);
 		$this->load_dependencies();
 	}
+	/*** mix get_error([string $key=null])
+	 *	@description  get error information
+	 *	@input	$key	'code', 'message' or null
+	 *	@return	message or code if key given, or array of error information if key omitted
+	***/
 	public function get_error($key=null)
 	{
 		if (!$this->status['error_code']) return null;
+		if ($key==self::ERROR_KEY_CODE) return $this->status['error_code'];
+		$this->status['error_message'] = $this->language_tag($this->status['error_code']);
+		if ($key==self::ERROR_KEY_MSG) return $this->status['error_message'];
 		$this->status['class'] = get_class($this);
 		return isset($key)?@$this->status[$key]:$this->status;
 	}
