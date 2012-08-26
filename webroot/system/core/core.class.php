@@ -661,6 +661,15 @@ Class Core
 		}
     	return APP_DIR.'/'.($active?'beans':'resource/beans').'/'.join('/', $path).'/'.$class_file;
 	}
+	/*** string basename($path)
+	 *	@description multi-byte save basename() no matter what locale is.
+	 *	@input $path	path like folder1/folder2/.../name
+	 *	@return the last frag in path string
+	***/
+	protected function basename($path)
+	{
+		return end(preg_split("/\//", $path));
+	}
     /*** Simple Xor encrypt/decrypt***
      *  Principle:
      *  A^0 = A
