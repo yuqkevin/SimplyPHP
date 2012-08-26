@@ -21,11 +21,11 @@ div.action-action {padding-left:1.5em;}
 			<?php print substr($model,2).'&nbsp;&nbsp;<span class="w3s-desc">'.htmlspecialchars(@$action_def['MODEL::']['description']).'</span>';?>
 			<?php foreach ($action_def['HANDLER::'] as $handler=>$desc):?>
 			<div class="action-handler m-<?php print $model;?>">
-				<input type="checkbox" name="actions[]" value="<?php print "$model::$handler::*";?>" id="h-<?php print $handler;?>" class="action-obj" />
+				<input type="checkbox" name="actions[]" value="<?php print "$model::$handler::*";?>" id="h-<?php print $model.'-'.$handler;?>" class="action-obj" />
 					<?php print $handler."&nbsp;&nbsp;<span class=\"w3s-desc\">".htmlspecialchars($desc)."</span>";?>
 				<?php if (isset($action_def[$handler])):?>
 				<?php foreach ($action_def[$handler] as $action=>$act_desc):?>
-					<div class="action-action h-<?php print $handler;?>">
+					<div class="action-action h-<?php print $model.'-'.$handler;?>">
 						<input type="checkbox" name="actions[]" value="<?php print "$model::$handler::$action";?>"/>
 						<?php print $action."&nbsp;&nbsp;<span class=\"w3s-desc\">".htmlspecialchars($act_desc)."</span>";?></div>
 				<?php endforeach;?>

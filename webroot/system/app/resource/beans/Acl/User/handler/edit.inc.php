@@ -7,10 +7,8 @@ $user = $this->get_lib('LibAclUser');
 $id = intval($this->request('id'));
 $token_key = $this->key_gen().$id;
 $act = $this->s_decrypt($this->request('token'), $token_key);
-if (!$timestamp=$this->request('timestamp')) $timestamp = time();
-
-$user_nonce = $this->request('nonce');
-$server_nonce = md5($token_key.$timestamp);
+$timestamp = $this->request('timestamp');
+$nonce = $this->request('nonce');
 switch ($act) {
 	case 'create':
 	case 'edit':
@@ -23,14 +21,13 @@ switch ($act) {
 		}
 		$groups = $this->hasharray2array($user->group_search(array('dna'=>$operator['dna'])),'id','name');
 		$this->stream['data']['group_options'] = $this->hash_options($groups, @$account['group']);
-		$this->stream['data']['timestamp'] = $timestamp;
-		$this->stream['data']['nonce'] = $server_nonce;
+		$this->stream['data'] += $user->nonce('new');
 		$this->stream['data']['act'] = $act;
 		break;
 	case 'update':
 		$this->ajax();
-		if ($error_code=$user->nonce_verify($user_nonce, $server_nonce, $timestamp)) {
-			$this->stream['data']['message'] = $this->language_tag($error_code);
+		if (!$user->nonce('verify', $nonce, $timestamp)) {
+			$this->stream['data']['message'] = $user->get_error('message');
 			return;
 		}
 		$param = array('nickname'=>1,'comments'=>null);

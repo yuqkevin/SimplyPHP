@@ -8,6 +8,10 @@ class LibAclUser extends LibAcl
 	const	DNA_SYS 		= 1;	// global system users. top privileges in global scope
 	const	GROUP_SYS		= 1;	// system mantain group which has full access in global scope
 
+	const	USER_SCOPE_PRIMARY	= 'primary';	// primary account
+	const	USER_SCOPE_REGULAR = 'regular';		// regular account, means it is not a primary account
+	const	USER_SCOPE_SYSTEM = 'system';	// system account but not root, has system level access
+
 	const	DOMAIN_VERIFIED = '1';
 	const	DOMAIN_UNVERIFIED = '0';
 
@@ -20,13 +24,24 @@ class LibAclUser extends LibAcl
 	const	USER_SESSION_AUTH = Core::USER_SESSION_AUTH;	// using core session define so can share core::user_info();
 	const	USER_SESSION_HOOK = 'LibAcl::USER_SH';
 
+    /*** mix user_info([string $name])
+     *  @description read user authentication session, overide core::user_info() with local one.
+     *  @input $name    property name
+     *  @return mix whole user session if no property name given or property value by given name
+    ***/
+    public function user_info($name=null)
+    {
+        if (!$info=$this->session(self::USER_SESSION_AUTH)) return false;
+        return $name?@$info[$name]:$info;
+    }
+
 	/*** bool sign_in(string $name, string $pass)
 	 *	@description	Verify user's identification
 	 *	@input	$name	User Login ID (email address in lower cases usually)
 	 *			$pass	User's password in plain text
 	 *	@return	bool	true if pass and start user session and logging user info into session, or false if failure
 	 ****/
-	function sign_in($name, $pass)
+	public function sign_in($name, $pass)
 	{
 		if (!$name||!$pass) {
 			$this->status['error_code'] = 'SIGN_IN_NODATA';
@@ -50,10 +65,10 @@ class LibAclUser extends LibAcl
 						}
 					}
 					// set user account scope
-					$user['scope'] = $user['id']==$user['dna']?'primary':'regular';
+					$user['scope'] = $user['id']==$user['dna']?self::USER_SCOPE_PRIMARY:self::USER_SCOPE_REGULAR;
 				} else {
 					$user['group']['action'] = array('*::*::*');	// system supper group, full access
-					$user['scope'] = $user['id']==$user['dna']?'root':'system';
+					$user['scope'] = self::USER_SCOPE_SYSTEM;
 				}
 				return $this->user_session('new', $user);
 			}
@@ -68,7 +83,7 @@ class LibAclUser extends LibAcl
 	/*** bool sign_out()
 	 *	@description	sign user out and end the member session
 	***/
-	function sign_out()
+	public function sign_out()
 	{
 		$this->session_hook('clear');
 		return $this->user_session('close');
@@ -77,7 +92,7 @@ class LibAclUser extends LibAcl
 	/*** mix session_verify([int $lifetime[, string $login[, string $pass[, bool $cross_domain]]]])
 	 *	@description	verify user session and returns user info if success, or returns false
 	***/
-	function session_verify($lifetime=0, $login=null, $pass=null, $cross_domain=false)
+	public function session_verify($lifetime=0, $login=null, $pass=null, $cross_domain=false)
 	{
         if (!$operator=$this->user_session('verify', $lifetime)) {
 			if ($login&&$pass) {
@@ -101,7 +116,7 @@ class LibAclUser extends LibAcl
 	/*** array account_search([array $filter[, string $suffix[,string $fields="*"]])
 	 *	@description listing user with specific filter and suffix limitation, for user other than system group, the list is within dan only.
 	***/
-	function account_search($filter=null, $suffix=null, $fields="*")
+	public function account_search($filter=null, $suffix=null, $fields="*")
 	{
 		$operator = $this->user_info();
 		$filter['id::>'] = 1; // Hide system root
@@ -117,7 +132,7 @@ class LibAclUser extends LibAcl
 	 *			array  $param	user's new properties
 	 *	@return	mix
 	***/
-	function account($act, $id=null, $param=null)
+	public function account($act, $id=null, $param=null)
 	{
 		if ($id) {
 			$data = $this->tbl->account->read($id);
@@ -157,7 +172,7 @@ class LibAclUser extends LibAcl
 	/*** mix group(string $act[, int $id[, array $param]])
 	 *	@description	applying action on specific group
 	***/
-	function group($act, $id=null, $param=null)
+	public function group($act, $id=null, $param=null)
 	{
 		if ($id) {
 			$data = $this->tbl->group->read($id);
@@ -184,7 +199,7 @@ class LibAclUser extends LibAcl
 	/*** array group_search([array $filter[, string $suffix]])
 	 *	@description listing group with specific filter and limit
 	***/
-	function group_search($filter=null, $suffix=null)
+	public function group_search($filter=null, $suffix=null)
 	{
 		$operator = $this->user_info();
 		if (!isset($filter['dna'])&&$operator['dna']!=self::DNA_SYS) $filter['dna'] = $operator['dna'];
@@ -195,7 +210,7 @@ class LibAclUser extends LibAcl
 	 *	@description	Disable specific user with comments option
 	 *	@return	true if success or false if failure
 	***/
-	function disable($userid, $comments=null)
+	public function disable($userid, $comments=null)
 	{
 		$session = $this->user_session('get');
 		$comments .= sprintf("\n done by %s at %s", $session['login'], date('Y-m-d H:i'));
@@ -205,7 +220,7 @@ class LibAclUser extends LibAcl
 	/*** mix domain(string $act[, int $id[, array $param]])
 	 *	@description	Applying action on specific domain
 	***/
-	function domain($act, $id=null, $param=null)
+	public function domain($act, $id=null, $param=null)
 	{
         if (!($entry=$this->dna_verify('domain', $id))&&!in_array($act,array('read','locate'))) return false;
         $operator = $this->user_info();
@@ -248,6 +263,7 @@ class LibAclUser extends LibAcl
 		}
 		return $obj_dna===$operator_dna;
 	}
+
 	/*** mix session_hook(string $name[,mix $val])
 	 *	@description	Setting/Getting user variables in session other than user_session
 	 *	@input	$name	variable name, 'clear','reset' are reserved for clean session
@@ -276,14 +292,14 @@ class LibAclUser extends LibAcl
 			case 'new':
 				$data = array(
 					'ip'=>$this->env('REMOTE_ADDR'),
-					'url'=>$this->env('PATH'),
+					'url'=>$this->env('URI'),
 					'user'=>$val['id'],
 					'action'=>'0'
 				);
 				$this->user_session('close');
 				$this->tbl->session->create($data);
 				$val['timestamp'] = time();
-				$val['data'] = array('url'=>array($this->env('PATH')));
+				$val['data'] = array('url'=>array($this->env('URI')));
 				$val['step'] = 0;
 				$this->session(self::USER_SESSION_AUTH, $val);
 				return $val;
@@ -334,7 +350,7 @@ class LibAclUser extends LibAcl
 					// record last two step urls
 					$urls = $session['data']['url'];
 					if (count($urls)>1) array_shift($urls);
-					array_push($urls, $this->env('PATH'));
+					array_push($urls, $this->env('URI'));
 					$session['data']['url'] = $urls;
 					$this->session(self::USER_SESSION_AUTH, $session);
 					return $session;

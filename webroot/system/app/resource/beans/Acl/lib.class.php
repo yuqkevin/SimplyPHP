@@ -1,32 +1,47 @@
 <?php
 class LibAcl extends Library
 {
-	/*** bool nonce(string $act, string $nonce, int $timestamp)
-	 *	@description validating a nonce with timestamp and register for valid nonce
-	 *	@input	$act		'check/record'
-	 *			$nonce		nonce in string
-	 *			$timestmp	unix timestamp, seconds since unix epoch
-	 *	@return	true if no use or recorded successfuly, or false for an used nonce
+	/*** bool nonce(string $act[, string $nonce[, int $timestamp[, int $ttl=3600]])
+	 *	@description create,record,check or verify nonces
+	 *	@input	$act	new: get a new nonce,
+	 *					record: register nonce,timestamp pair into database
+	 *					check: search nonce,timestamp pair in database
+	 *					verify: verify given nonce by given timestamp
+	 *			$nonce	the nonce will be verified/record/checked here
+	 *			$timestamp	timestamp for verifying/record/checking
+	 *			$ttl	lifetime in seconds for verification, 0 for never expire verify
+	 *	@return	new: array('nonce'=>new_nonce, 'timestamp'=>timestamp_in_nonce)
+	 *			record: true for record success, false for failure
+	 *			check:	true no-duplicate found, false for duplicated nonce found
+	 *			verify:	false if failure or true for pass
 	***/
-	public function nonce($act, $nonce, $timestamp)
+	public function nonce($act, $nonce=null, $timestamp=null, $ttl=3600)
 	{
-		$param = array('id'=>$nonce,'timestamp'=>$timestamp);
-		if ($act=='record') return (bool) $this->tbl->nonce->create($param);
-		if ($act=='check') return !(bool)$this->tbl->nonce->search($param);
+		switch ($act) {
+			case 'new':
+				$timestamp = time();
+				$nonce = md5($this->conf['global']['salt'].$timestamp.$this->session('id'));
+				return compact('nonce', 'timestamp');
+			case 'record':
+				return (bool) $this->tbl->nonce->create(array('id'=>$nonce,'timestamp'=>$timestamp));
+			case 'check':
+				return !(bool)$this->tbl->nonce->search(array('id'=>$nonce,'timestamp'=>$timestamp));
+			case 'verify':
+				if ($ttl&&(time()-intval($timestamp))>$ttl) {
+					$this->status['error_code'] = 'NONCE_FAILURE_EXPIRE';
+					return false;
+				}
+				$nonce_verify = md5($this->conf['global']['salt'].$timestamp.$this->session('id'));
+				if ($nonce!=$nonce_verify) {
+					$this->status['error_code'] = 'NONCE_FAILURE_NOMATCH';
+					return false;
+				}
+				if (!$this->nonce('check', $nonce, $timestamp)) {
+					$this->status['error_code'] = 'NONCE_FAILURE_DUPLICATED';
+					return false;
+				}
+				return true;
+		}
+		return false;
 	}
-    /*** string nonce_verify(string $user_nonce, string $server_nonce, int $timestamp[, int $lifetime=0])
-     *  @description verify nonce key and returns error code if failure, or null for pass
-     *  @input  $user_nonce     nonce user submitted
-     *          $server_nonce   nonce generate at server side
-     *          $timestamp      timestamp of nonce
-     *          $lifetime       lifetime of nonce in seconds, 0 for no expire, 1 hour as default
-     *  @return error code for failure, null for pass
-    ***/
-    public function nonce_verify($user_nonce, $server_nonce, $timestamp, $lifetime=3600)
-    {
-        if ($lifetime&&(time()-intval($timestamp))>$lifetime) return 'NONCE_FAILURE_EXPIRE';
-        if ($user_nonce!==$server_nonce) return 'NONCE_FAILURE_NOMATCH';
-        if (!$this->nonce('check', $user_nonce, $timestamp)) return 'NONCE_FAILURE_DUPLICATED';
-		return null;
-    }
 }

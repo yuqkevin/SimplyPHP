@@ -1,4 +1,7 @@
-<div id="user-login" style="max-width:500px;margin:0 auto;">
+<div id="MoAclUser-login" style="max-width:500px;margin:0 auto;">
+<style type="text/css">
+<?php include("login.css");?>
+</style>
 <form id="user-login-form" class="w3s-ajax" method="post" action="<?php print $this->stream['comp_url'];?>">
 <input type="hidden" name="timestamp" value="<?php print $timestamp;?>" />
 <input type="hidden" name="nonce" value="<?php print $nonce;?>" />
